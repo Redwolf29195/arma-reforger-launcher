@@ -1,0 +1,8 @@
+GameProject {
+ ID "ALGZLauncherWorkshopBridge"
+ GUID "A7909293ED71A512"
+ TITLE "Arma Reforger Launcher Workshop Bridge"
+ Dependencies {
+  "58D0FB3206B6F859"
+ }
+}

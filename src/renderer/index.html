@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://ar-gcp-cdn.bistudio.com; style-src 'self'; script-src 'self'; connect-src 'none'">
+  <title>Arma Reforger Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="titlebar">
+    <div class="titlebar-drag">
+      <span class="titlebar-mark">AR</span>
+      <span>Arma Reforger Launcher</span>
+      <span class="titlebar-state"><i></i><span id="titlebarStatus">Ready</span></span>
+      <button class="titlebar-update" id="titlebarUpdate" type="button" hidden>
+        <img src="assets/icons/download.svg" alt=""><span>Update available</span>
+      </button>
+    </div>
+    <div class="window-actions">
+      <div class="language-switch" role="group" aria-label="Language">
+        <button type="button" data-language="en" aria-pressed="true">EN</button>
+        <button type="button" data-language="ru" aria-pressed="false">RU</button>
+      </div>
+      <button id="windowMinimize" class="icon-button" title="Minimize"><img src="assets/icons/minus.svg" alt=""></button>
+      <button id="windowMaximize" class="icon-button" title="Maximize"><img src="assets/icons/square.svg" alt=""></button>
+      <button id="windowClose" class="icon-button close-button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-panel">
+        <div class="brand-kicker">COMMUNITY TOOLS</div>
+        <div class="brand-title">ARMA<br>REFORGER</div>
+        <div class="brand-subtitle">LAUNCHER</div>
+      </div>
+
+      <nav class="main-nav" aria-label="Sections">
+        <button class="nav-item active" data-view="dashboard">
+          <img src="assets/icons/layout-dashboard.svg" alt=""><span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="mods">
+          <img src="assets/icons/blocks.svg" alt=""><span>Mods</span><b id="navModsCount">0</b>
+        </button>
+        <button class="nav-item" data-view="workshop">
+          <img src="assets/icons/store.svg" alt=""><span>Workshop</span>
+        </button>
+        <button class="nav-item" data-view="servers">
+          <img src="assets/icons/server.svg" alt=""><span>Servers</span>
+        </button>
+        <button class="nav-item" data-view="presets">
+          <img src="assets/icons/layers-3.svg" alt=""><span>Presets</span><b id="navPresetsCount">0</b>
+        </button>
+        <button class="nav-item" data-view="parameters">
+          <img src="assets/icons/sliders-horizontal.svg" alt=""><span>Parameters</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <img src="assets/icons/settings.svg" alt=""><span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="game-detection" id="gameDetection">
+          <span class="status-dot"></span>
+          <div><strong>Arma Reforger</strong><small>Checking...</small></div>
+        </div>
+        <button class="sidebar-build-button" id="openAboutSidebar" type="button" aria-label="About" title="About">
+          <span class="sidebar-build-mark">A</span>
+          <span class="sidebar-build-copy"><strong id="appVersion">v0.1.0</strong><small id="sidebarBuildStatus">Development build</small></span>
+          <span class="sidebar-build-state" id="sidebarBuildState" aria-hidden="true"></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="page-header">
+        <div>
+          <p id="pageEyebrow">OVERVIEW</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="header-actions" id="headerActions"></div>
+      </header>
+
+      <div class="view-stack">
+        <section class="view active" id="view-dashboard">
+          <div class="home-dashboard">
+            <section class="home-hero">
+              <div class="home-hero-copy">
+                <h2><span class="home-title-intro" data-home-i18n="home.welcomeIntro">WELCOME TO</span> <span class="home-title-brand">ARMA REFORGER LAUNCHER</span></h2>
+                <div class="home-hero-actions">
+                  <button class="button primary" type="button" data-home-view="workshop"><img src="assets/icons/store.svg" alt=""><span data-home-i18n="home.openWorkshop">Open Workshop</span></button>
+                  <button class="button secondary" type="button" data-home-view="servers"><img src="assets/icons/server.svg" alt=""><span data-home-i18n="home.findServer">Find a server</span></button>
+                </div>
+              </div>
+              <aside class="home-session-card">
+                <div class="home-session-heading">
+                  <span class="home-readiness-badge" id="homeReadinessBadge"><i></i><b id="homeReadinessText">Ready</b></span>
+                </div>
+                <strong class="home-session-preset" id="homePresetName">No preset selected</strong>
+                <small id="homePresetMeta">0 selected mods</small>
+                <div class="home-session-stats">
+                  <div><span data-home-i18n="home.gameLabel">Game</span><b id="homeGameState">Checking...</b></div>
+                  <div><span data-home-i18n="home.installedLabel">Installed mods</span><b id="homeInstalledMods">0</b></div>
+                </div>
+              </aside>
+            </section>
+
+            <section class="home-tools" aria-label="Launcher tools">
+              <div class="home-section-heading">
+                <div><p data-home-i18n="home.toolsKicker">TOOLKIT</p><h2 data-home-i18n="home.toolsTitle">Launcher tools</h2></div>
+                <span data-home-i18n="home.toolsHint">Choose where to continue</span>
+              </div>
+              <div class="home-tool-grid">
+                <button class="home-tool-card" type="button" data-home-view="mods">
+                  <span class="home-tool-icon"><img src="assets/icons/blocks.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolMods">Mods</strong><small data-home-i18n="home.toolModsDescription">Manage installed content</small></span>
+                  <b class="home-tool-meta" id="homeModsMetric">0</b>
+                </button>
+                <button class="home-tool-card" type="button" data-home-view="workshop">
+                  <span class="home-tool-icon"><img src="assets/icons/store.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolWorkshop">Workshop</strong><small data-home-i18n="home.toolWorkshopDescription">Find and add new mods</small></span>
+                  <b class="home-tool-meta" data-home-i18n="home.metricCatalog">CATALOG</b>
+                </button>
+                <button class="home-tool-card" type="button" data-home-view="servers">
+                  <span class="home-tool-icon"><img src="assets/icons/server.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolServers">Servers</strong><small data-home-i18n="home.toolServersDescription">Browse or connect directly</small></span>
+                  <b class="home-tool-meta" data-home-i18n="home.metricOnline">ONLINE</b>
+                </button>
+                <button class="home-tool-card" type="button" data-home-view="presets">
+                  <span class="home-tool-icon"><img src="assets/icons/layers-3.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolPresets">Presets</strong><small data-home-i18n="home.toolPresetsDescription">Keep mod collections together</small></span>
+                  <b class="home-tool-meta" id="homePresetsMetric">0</b>
+                </button>
+                <button class="home-tool-card" type="button" data-home-view="parameters">
+                  <span class="home-tool-icon"><img src="assets/icons/sliders-horizontal.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolParameters">Parameters</strong><small data-home-i18n="home.toolParametersDescription">Adjust how the game starts</small></span>
+                  <b class="home-tool-meta" data-home-i18n="home.metricLaunch">LAUNCH</b>
+                </button>
+                <button class="home-tool-card" type="button" data-home-view="settings">
+                  <span class="home-tool-icon"><img src="assets/icons/settings.svg" alt=""></span>
+                  <span class="home-tool-copy"><strong data-home-i18n="home.toolSettings">Settings</strong><small data-home-i18n="home.toolSettingsDescription">Paths, updates and options</small></span>
+                  <b class="home-tool-meta" data-home-i18n="home.metricSystem">SYSTEM</b>
+                </button>
+              </div>
+            </section>
+
+            <div class="home-bottom-grid">
+              <article class="home-guide-card">
+                <span class="home-guide-icon"><img src="assets/icons/list-checks.svg" alt=""></span>
+                <div><p data-home-i18n="home.guideKicker">QUICK START</p><strong data-home-i18n="home.guideTitle">Not sure where to begin?</strong><small data-home-i18n="home.guideDescription">A short guide explains presets, mods and server joining.</small></div>
+                <button class="button secondary" id="homeManualOpen" type="button"><span data-home-i18n="home.guideButton">Open guide</span></button>
+              </article>
+              <article class="home-community-card">
+                <div class="home-community-copy"><p data-home-i18n="home.communityKicker">COMMUNITY</p><strong>ALGZ</strong><small class="home-community-credit" data-home-i18n="home.communityCredit">Open-source launcher</small></div>
+                <div class="home-community-links">
+                  <a class="home-community-link discord" id="homeDiscordLink" href="https://discord.gg/P54RqqWDE" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ Discord" title="Open ALGZ Discord"><img src="assets/icons/discord.svg" alt=""></a>
+                  <a class="home-community-link website" id="homeWebsiteLink" href="https://armalaucher.com/" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ website" title="Open ALGZ website"><img src="assets/icons/globe-2.svg" alt=""></a>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-mods">
+          <div class="toolbar">
+            <label class="search-field">
+              <img src="assets/icons/search.svg" alt="">
+              <input id="modSearch" type="search" placeholder="Search" autocomplete="off">
+            </label>
+            <div class="segmented-control" id="modFilter">
+              <button class="active" data-filter="all">All</button>
+              <button data-filter="selected">Selected</button>
+              <button data-filter="problems">Problems</button>
+            </div>
+            <button class="icon-button bordered" id="rescanMods" title="Rescan mods"><img src="assets/icons/refresh-cw.svg" alt=""></button>
+          </div>
+
+          <div class="list-summary">
+            <span id="modListSummary">0 mods</span>
+            <div>
+              <button class="button quiet" id="selectAllMods"><img src="assets/icons/list-checks.svg" alt="">Select all</button>
+              <button class="button quiet" id="updateMods" type="button"><img src="assets/icons/refresh-cw.svg" alt=""><span>Update selected</span></button>
+              <button class="button quiet" id="addDependencies"><img src="assets/icons/git-branch.svg" alt="">Add dependencies</button>
+              <button class="button quiet danger-text" id="deleteSelectedMods" disabled><img src="assets/icons/trash-2.svg" alt=""><span>Delete</span></button>
+              <button class="button quiet danger-text" id="clearSelection"><img src="assets/icons/list-x.svg" alt="">Clear</button>
+            </div>
+          </div>
+
+          <div class="data-table mods-table">
+            <div class="table-head">
+              <span class="check-column"></span><span>Mod</span><span>Version</span><span>Relationships</span><span>Status</span><span>Actions</span>
+            </div>
+            <div class="table-body" id="modsTableBody"></div>
+          </div>
+        </section>
+
+        <section class="view" id="view-workshop">
+          <div class="configurator-categories" id="configuratorCategories" role="list" aria-label="Mod categories">
+            <button class="configurator-category active" type="button" data-category="" role="listitem"><span>ALL</span><strong>All mods</strong></button>
+            <button class="configurator-category" type="button" data-category="WEAPONS" role="listitem"><span>WPN</span><strong>Weapons</strong></button>
+            <button class="configurator-category" type="button" data-category="VEHICLES" role="listitem"><span>VEH</span><strong>Vehicles</strong></button>
+            <button class="configurator-category" type="button" data-category="CHARACTERS" role="listitem"><span>CHR</span><strong>Characters</strong></button>
+            <button class="configurator-category" type="button" data-category="CLOTHING" role="listitem"><span>GEAR</span><strong>Clothing and gear</strong></button>
+            <button class="configurator-category" type="button" data-category="TERRAINS" role="listitem"><span>MAP</span><strong>Maps and terrains</strong></button>
+            <button class="configurator-category" type="button" data-category="SCENARIOS_MP" role="listitem"><span>MP</span><strong>Multiplayer scenarios</strong></button>
+            <button class="configurator-category" type="button" data-category="SCENARIOS_SP" role="listitem"><span>SP</span><strong>Single-player scenarios</strong></button>
+            <button class="configurator-category" type="button" data-category="SYSTEMS" role="listitem"><span>SYS</span><strong>Gameplay systems</strong></button>
+            <button class="configurator-category" type="button" data-category="EFFECTS" role="listitem"><span>FX</span><strong>Effects</strong></button>
+            <button class="configurator-category" type="button" data-category="PROPS" role="listitem"><span>OBJ</span><strong>Objects and bases</strong></button>
+          </div>
+          <form class="workshop-toolbar" id="workshopSearchForm">
+            <label class="search-field workshop-search-field">
+              <img src="assets/icons/search.svg" alt="">
+              <input id="workshopSearch" type="search" placeholder="Search" autocomplete="off" maxlength="120">
+            </label>
+            <label class="workshop-sort-field">
+              <span>Sort</span>
+              <select id="workshopSort">
+                <option value="subscribers">Popular</option>
+                <option value="newest">Newest</option>
+                <option value="rating">Rating</option>
+                <option value="favorites">Favorites</option>
+              </select>
+            </label>
+            <button class="button primary" type="submit"><img src="assets/icons/search.svg" alt=""><span>Search</span></button>
+            <button class="icon-button bordered" id="refreshWorkshop" type="button" title="Refresh Workshop"><img src="assets/icons/refresh-cw.svg" alt=""></button>
+          </form>
+          <div class="workshop-summary" id="workshopSummary">Official Workshop catalog</div>
+          <div class="workshop-grid" id="workshopGrid"></div>
+          <div class="workshop-pager">
+            <button class="icon-button bordered" id="workshopPrevious" title="Previous page"><img src="assets/icons/chevron-left.svg" alt=""></button>
+            <span id="workshopPageLabel">Page 1</span>
+            <button class="icon-button bordered" id="workshopNext" title="Next page"><img src="assets/icons/chevron-right.svg" alt=""></button>
+          </div>
+        </section>
+
+        <section class="view" id="view-servers">
+          <form class="server-toolbar" id="serverSearchForm">
+            <label class="search-field server-search-field">
+              <img src="assets/icons/search.svg" alt="">
+              <input id="serverSearch" type="search" placeholder="Search" autocomplete="off" maxlength="120">
+            </label>
+            <label class="workshop-sort-field server-sort-field">
+              <span>Sort</span>
+              <select id="serverSort">
+                <option value="players_desc">Most players</option>
+                <option value="popularity">Popular</option>
+                <option value="favorites">Favorites</option>
+              </select>
+            </label>
+            <button class="button primary" type="submit"><img src="assets/icons/search.svg" alt=""><span>Search</span></button>
+            <button class="icon-button bordered" id="refreshServers" type="button" title="Refresh servers"><img src="assets/icons/refresh-cw.svg" alt=""></button>
+          </form>
+          <form class="server-direct-bar" id="serverDirectForm">
+            <div>
+              <span id="serverDirectLabel">DIRECT CONNECT</span>
+              <div class="server-direct-fields">
+                <label class="server-direct-host"><img src="assets/icons/server.svg" alt=""><input id="serverDirectHost" type="text" placeholder="IP or hostname" maxlength="253" spellcheck="false" autocomplete="off" required></label>
+                <label class="server-direct-port"><input id="serverDirectPort" type="text" placeholder="Port" maxlength="5" inputmode="numeric" pattern="[0-9]{1,5}" spellcheck="false" autocomplete="off" required></label>
+              </div>
+            </div>
+            <button class="button secondary" type="submit"><img src="assets/icons/play.svg" alt=""><span>Connect</span></button>
+          </form>
+          <div class="server-summary">
+            <span id="serverSummary">Public server catalog</span>
+            <a id="serverProviderLink" href="https://reforgermods.com/servers" target="_blank" rel="noreferrer">Data by Arma Mods</a>
+          </div>
+          <div class="server-browser-layout">
+            <div class="server-list" id="serverList"></div>
+            <div class="server-details" id="serverDetails"></div>
+          </div>
+          <div class="server-pager">
+            <button class="icon-button bordered" id="serverPrevious" type="button" title="Previous page"><img src="assets/icons/chevron-left.svg" alt=""></button>
+            <span id="serverPageLabel">Page 1</span>
+            <button class="icon-button bordered" id="serverNext" type="button" title="Next page"><img src="assets/icons/chevron-right.svg" alt=""></button>
+          </div>
+        </section>
+
+        <section class="view" id="view-presets">
+          <div class="preset-layout">
+            <div class="preset-browser">
+              <div class="preset-toolbar">
+                <button class="button primary" id="importPreset"><img src="assets/icons/file-input.svg" alt="">Import JSON</button>
+                <button class="icon-button bordered" id="newPreset" title="New preset"><img src="assets/icons/plus.svg" alt=""></button>
+              </div>
+              <div class="preset-list" id="presetList"></div>
+            </div>
+            <div class="preset-details">
+              <div class="details-title">
+                <div><span>SELECTED PRESET</span><h2 id="presetDetailsName">No preset</h2></div>
+                <div class="details-actions">
+                  <button class="button secondary" id="editPreset"><img src="assets/icons/list-checks.svg" alt="">Edit</button>
+                  <button class="button secondary" id="sharePreset"><img src="assets/icons/share-2.svg" alt="">Share</button>
+                  <button class="button primary" id="shareFilePreset"><img src="assets/icons/send.svg" alt="">Export</button>
+                  <button class="button secondary" id="exportPreset"><img src="assets/icons/file-output.svg" alt="">Export JSON</button>
+                  <button class="button secondary" id="transferPresetMods" hidden><img src="assets/icons/hard-drive.svg" alt=""><span>Transfer mods</span></button>
+                  <button class="icon-button bordered danger-text" id="deletePreset" title="Delete preset"><img src="assets/icons/trash-2.svg" alt=""></button>
+                </div>
+              </div>
+              <div class="preset-facts" id="presetFacts"></div>
+              <div class="compact-mod-list" id="presetModList"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="view-parameters">
+          <div class="settings-section">
+            <div class="settings-section-title"><h2>Launch parameters</h2><span>Applied only when launched from this launcher</span></div>
+            <label class="setting-row toggle-row">
+              <div><strong>Skip intro screens</strong></div>
+              <input type="checkbox" id="settingNoSplash"><span class="toggle"></span>
+            </label>
+            <label class="setting-row toggle-row">
+              <div><strong>Allow a different mod version</strong><small>Launch even when versions differ</small></div>
+              <input type="checkbox" id="settingAllowMismatch"><span class="toggle"></span>
+            </label>
+            <label class="field-block">
+              <span>Additional parameters</span>
+              <input type="text" id="settingAdditionalArgs" placeholder="For example: -window -maxFPS 120">
+            </label>
+          </div>
+          <div class="settings-actions"><button class="button primary" id="saveParameters"><img src="assets/icons/save.svg" alt="">Save parameters</button></div>
+        </section>
+
+        <section class="view" id="view-settings">
+          <div class="settings-section">
+            <div class="settings-section-title"><h2>Paths</h2><span>The launcher uses an isolated profile</span></div>
+            <div class="path-setting">
+              <label><span>Arma Reforger</span><input id="settingGamePath" type="text" spellcheck="false"></label>
+              <button class="icon-button bordered" data-browse="game" title="Choose file"><img src="assets/icons/folder-open.svg" alt=""></button>
+            </div>
+            <div class="path-setting">
+              <label><span>Installed mods folder</span><input id="settingAddonsPath" type="text" spellcheck="false"></label>
+              <button class="icon-button bordered" data-browse="addons" title="Choose folder"><img src="assets/icons/folder-open.svg" alt=""></button>
+            </div>
+            <div class="path-setting">
+              <label><span>Workshop download folder</span><input id="settingDownloadsPath" type="text" spellcheck="false"></label>
+              <button class="icon-button bordered" data-browse="downloads" title="Choose folder"><img src="assets/icons/folder-open.svg" alt=""></button>
+            </div>
+            <div class="path-setting">
+              <label><span>Launcher profile</span><input id="settingProfilePath" type="text" spellcheck="false"></label>
+              <button class="icon-button bordered" data-browse="profile" title="Choose folder"><img src="assets/icons/folder-open.svg" alt=""></button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title"><h2>Preset behavior</h2><span>Workshop additions</span></div>
+            <label class="field-block">
+              <span>Default Workshop preset</span>
+              <select id="settingDefaultPreset"></select>
+            </label>
+            <label class="setting-row toggle-row">
+              <div><strong id="autoDependenciesSettingTitle">Add dependencies automatically</strong><small id="autoDependenciesSettingHelp">Enable required mods when a parent mod is selected or launched</small></div>
+              <input type="checkbox" id="settingAutoAddDependencies"><span class="toggle"></span>
+            </label>
+            <label class="setting-row toggle-row">
+              <div><strong id="confirmModDeletionSettingTitle">Warn before deleting a mod</strong><small id="confirmModDeletionSettingHelp">Ask before permanently removing mod files from this PC</small></div>
+              <input type="checkbox" id="settingConfirmModDeletion"><span class="toggle"></span>
+            </label>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title"><h2 id="advancedModeHeading">Advanced features</h2><span id="advancedModeSubtitle">Additional preset tools</span></div>
+            <label class="setting-row toggle-row">
+              <div><strong id="advancedModeTitle">Advanced mode</strong><small id="advancedModeHelp">Show tools for copying or moving preset mods to another folder</small></div>
+              <input type="checkbox" id="settingAdvancedMode"><span class="toggle"></span>
+            </label>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title"><h2 id="modLogsSettingHeading">Mod diagnostics</h2><span id="modLogsSettingSubtitle">Review changes that can affect presets</span></div>
+            <label class="setting-row toggle-row">
+              <div><strong id="modLogsFooterSettingTitle">Show on bottom panel</strong><small id="modLogsFooterSettingHelp">Keep quick access to mod logs next to launch status</small></div>
+              <input type="checkbox" id="settingShowModLogsFooter"><span class="toggle"></span>
+            </label>
+            <div class="setting-action-row">
+              <div><strong id="modLogsSettingTitle">Mod logs</strong><small id="modLogsSettingHelp">Added, installed, enabled, disabled and deleted mods</small></div>
+              <button class="button secondary" id="openModLogs" type="button"><img src="assets/icons/list-checks.svg" alt=""><span>Open logs</span><b id="modLogCount">0</b></button>
+            </div>
+          </div>
+
+          <div class="settings-section update-section">
+            <div class="settings-section-title"><h2>Updates and repair</h2><span id="updateStatus">Ready to check</span></div>
+            <label class="setting-row toggle-row">
+              <div><strong>Automatic updates</strong></div>
+              <input type="checkbox" id="settingAutoUpdate"><span class="toggle"></span>
+            </label>
+            <div class="button-row">
+              <button class="button secondary" id="checkUpdates"><img src="assets/icons/cloud-download.svg" alt="">Check for updates</button>
+              <button class="button primary" id="downloadUpdate" hidden><img src="assets/icons/download.svg" alt="">Download update</button>
+              <button class="button primary" id="installUpdate" hidden><img src="assets/icons/refresh-cw.svg" alt="">Install and restart</button>
+              <button class="button secondary" id="repairLauncher"><img src="assets/icons/wrench.svg" alt="">Repair</button>
+              <button class="button quiet" id="openDataFolder"><img src="assets/icons/folder-cog.svg" alt="">Launcher data</button>
+            </div>
+          </div>
+          <div class="settings-section about-settings-section">
+            <div class="settings-section-title"><h2 id="aboutSettingsHeading">About</h2><span id="aboutSettingsSubtitle">Developers, open source and license</span></div>
+            <div class="setting-action-row about-setting-row">
+              <div class="about-setting-summary"><span class="about-setting-state" id="aboutSettingState" aria-hidden="true"></span><div><strong id="aboutSettingsTitle">Open-source launcher</strong><small id="aboutSettingsStatus">Development build</small></div></div>
+              <button class="button secondary" id="openAboutSettings" type="button"><img src="assets/icons/external-link.svg" alt=""><span id="aboutSettingsButton">View details</span></button>
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button class="button quiet danger-text" id="resetSettings"><img src="assets/icons/rotate-ccw.svg" alt="">Factory reset</button>
+            <button class="button primary" id="saveSettings"><img src="assets/icons/save.svg" alt="">Save</button>
+          </div>
+        </section>
+      </div>
+
+      <footer class="launch-footer">
+        <div class="footer-preset">
+          <img src="assets/icons/layers-3.svg" alt="">
+          <div><span>PRESET</span><strong id="footerPresetName">Not selected</strong></div>
+        </div>
+        <button class="footer-mod-logs" id="footerModLogs" type="button" title="Open mod logs">
+          <img src="assets/icons/list-checks.svg" alt="">
+          <span><small id="footerModLogsLabel">MOD LOGS</small><strong id="footerModLogsCount">0</strong></span>
+        </button>
+        <div class="footer-status" id="footerStatus"><span class="status-dot"></span><span>Select a preset</span></div>
+        <div class="launch-actions">
+          <button class="download-missing-button" id="downloadMissingMods" title="Download missing mods"><img src="assets/icons/cloud-download.svg" alt=""><span>DOWNLOAD MODS</span></button>
+          <button class="play-button" id="launchGame"><img src="assets/icons/play.svg" alt=""><span>PLAY</span></button>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <dialog class="wide-dialog home-manual-dialog" id="homeManualDialog">
+    <div class="dialog-header"><div><span data-home-i18n="home.manualKicker">LAUNCHER GUIDE</span><h2 data-home-i18n="home.manualTitle">How to get started</h2></div><button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+    <div class="home-manual-body">
+      <p class="home-manual-intro" data-home-i18n="home.manualIntro">Follow these steps for a clean first launch.</p>
+      <ol class="home-manual-steps">
+        <li><span>01</span><div><strong data-home-i18n="home.manualStep1Title">Check the game path</strong><p data-home-i18n="home.manualStep1Text">Open Settings and make sure Arma Reforger is detected.</p></div></li>
+        <li><span>02</span><div><strong data-home-i18n="home.manualStep2Title">Choose your mods</strong><p data-home-i18n="home.manualStep2Text">Use Workshop to find content, then add it to a preset.</p></div></li>
+        <li><span>03</span><div><strong data-home-i18n="home.manualStep3Title">Prepare the preset</strong><p data-home-i18n="home.manualStep3Text">Download missing mods and resolve version warnings before a normal launch.</p></div></li>
+        <li><span>04</span><div><strong data-home-i18n="home.manualStep4Title">Join a server</strong><p data-home-i18n="home.manualStep4Text">Choose a server and connect. Arma Reforger downloads missing server mods after it starts.</p></div></li>
+      </ol>
+    </div>
+    <div class="dialog-actions spread-actions">
+      <button class="button secondary" type="button" data-home-view="settings"><img src="assets/icons/settings.svg" alt=""><span data-home-i18n="home.manualSettings">Open Settings</span></button>
+      <div class="button-row"><button class="button quiet" type="button" data-dialog-close><span data-home-i18n="common.close">Close</span></button><button class="button primary" type="button" data-home-view="workshop"><img src="assets/icons/store.svg" alt=""><span data-home-i18n="home.openWorkshop">Open Workshop</span></button></div>
+    </div>
+  </dialog>
+
+  <dialog class="wide-dialog about-dialog" id="aboutDialog" aria-labelledby="aboutDialogTitle">
+    <div class="dialog-header">
+      <div><span id="aboutDialogKicker">OPEN-SOURCE SOFTWARE</span><h2 id="aboutDialogTitle">About</h2></div>
+      <button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+    <div class="about-dialog-body">
+      <section class="about-identity-banner" id="aboutIdentityBanner" data-status="development">
+        <span class="about-brand-mark" aria-hidden="true">A</span>
+        <div><strong id="aboutProductName">ALGZ Launcher for Arma Reforger</strong><span id="aboutOverallStatus">Development build</span><small id="aboutStatusHelp">Running from editable source code under GPL-3.0-only.</small></div>
+      </section>
+
+      <section class="about-fact about-developers" aria-labelledby="aboutDeveloperLabel">
+        <span id="aboutDeveloperLabel">Developers</span>
+        <div class="about-developer-list">
+          <div><strong id="aboutDeveloperValue">ALGZ / ExtaZzZ</strong><small id="aboutDiscordValue">Discord: legoshi223</small></div>
+          <div><strong>Palma</strong><small>Discord: 4elakoc</small></div>
+          <div><strong>Plocheck</strong><small>Discord: .plochek</small></div>
+        </div>
+      </section>
+
+      <div class="about-facts">
+        <div class="about-fact"><span id="aboutVersionLabel">Installed version</span><strong id="aboutVersionValue">v0.1.0</strong></div>
+        <div class="about-fact"><span id="aboutBuildIdLabel">Build ID</span><strong id="aboutBuildIdValue">—</strong></div>
+        <div class="about-fact"><span id="aboutBuiltAtLabel">Built at</span><strong id="aboutBuiltAtValue">—</strong></div>
+      </div>
+
+      <div class="about-verification-grid">
+        <section class="about-verification-card" id="aboutIntegrityCard" data-status="development">
+          <span id="aboutIntegrityLabel">Software license</span>
+          <strong id="aboutIntegrityStatus">GNU GPL v3</strong>
+          <small id="aboutIntegrityHelp">Source code is available to use, modify and redistribute under GPL-3.0-only.</small>
+        </section>
+        <section class="about-verification-card" id="aboutWindowsCard" data-status="development">
+          <span id="aboutWindowsLabel">Windows digital signature</span>
+          <strong id="aboutWindowsStatus">Not checked in development</strong>
+          <small id="aboutWindowsSigner">Signer: —</small>
+        </section>
+      </div>
+
+      <section class="about-official-source">
+        <span id="aboutOfficialSourceLabel">Official ALGZ releases</span>
+        <code>github.com/Redwolf29195/arma-reforger-launcher-updates/releases</code>
+        <p id="aboutOfficialSourceHelp">Maintainer releases are available on this page. Community builds and modifications are permitted by the GPL license.</p>
+      </section>
+
+      <p class="about-rights" id="aboutCopyright">© 2026 ALGZ / ExtaZzZ and contributors. GPL-3.0-only.</p>
+      <p class="about-trademark" id="aboutTrademark">This launcher is not affiliated with or authorized by Bohemia Interactive a.s. Bohemia Interactive, ARMA, and associated logos and designs are trademarks or registered trademarks of Bohemia Interactive a.s.</p>
+    </div>
+    <div class="dialog-actions spread-actions about-dialog-actions">
+      <button class="button quiet" id="openLicense" type="button"><span id="aboutLicenseButton">View license</span></button>
+      <div>
+        <button class="button quiet" type="button" data-dialog-close><span id="aboutCloseButton">Close</span></button>
+        <button class="button primary" id="openOfficialReleases" type="button"><img src="assets/icons/external-link.svg" alt=""><span id="aboutReleasesButton">Open official releases</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="wide-dialog license-dialog" id="licenseDialog" aria-labelledby="licenseDialogTitle">
+    <div class="dialog-header">
+      <div><span id="licenseDialogKicker">ALGZ SOFTWARE</span><h2 id="licenseDialogTitle">GNU General Public License v3</h2></div>
+      <button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+    <div class="license-dialog-body">
+      <p class="license-dialog-note" id="licenseDialogNote">Launcher source is licensed under GPL-3.0-only. Third-party components retain their own licenses.</p>
+      <pre id="licenseDialogText" tabindex="0" aria-live="polite">Loading license…</pre>
+    </div>
+    <div class="dialog-actions">
+      <button class="button secondary" id="licenseBackToAbout" type="button"><span id="licenseBackButton">Back to About</span></button>
+      <button class="button primary" type="button" data-dialog-close><span id="licenseCloseButton">Close</span></button>
+    </div>
+  </dialog>
+
+  <dialog id="presetDialog">
+    <form method="dialog" id="presetForm">
+      <div class="dialog-header"><h2 id="presetDialogTitle">Save preset</h2><button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+      <label class="field-block"><span>Name</span><input id="presetNameInput" type="text" maxlength="80" required autocomplete="off"></label>
+      <div class="dialog-summary" id="dialogSummary"></div>
+      <div class="dialog-actions"><button class="button quiet" type="button" data-dialog-close>Cancel</button><button class="button primary" id="confirmPresetSave" type="submit" value="default">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="addToPresetDialog">
+    <form method="dialog" id="addToPresetForm">
+      <div class="dialog-header"><h2>Add mod to preset</h2><button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+      <div class="dialog-summary workshop-preset-summary"><strong id="addToPresetModName"></strong><small id="addToPresetModId"></small></div>
+      <label class="field-block" id="addToPresetExistingField"><span>Preset</span><select id="addToPresetSelect"></select></label>
+      <label class="field-block" id="addToPresetNewField" hidden><span>New preset name</span><input id="addToPresetName" type="text" maxlength="80" autocomplete="off"></label>
+      <label class="setting-row toggle-row dialog-toggle" id="rememberPresetRow">
+        <div><strong>Set as default</strong></div>
+        <input type="checkbox" id="rememberPreset"><span class="toggle"></span>
+      </label>
+      <div class="dialog-actions"><button class="button quiet" type="button" data-dialog-close>Cancel</button><button class="button primary" id="confirmAddToPreset" type="submit" value="default"><img src="assets/icons/plus.svg" alt="">Add</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="importDialog" class="wide-dialog">
+    <form method="dialog" id="importForm">
+      <div class="dialog-header"><div><span>ARMA REFORGER PRESET</span><h2>Import JSON</h2></div><button class="icon-button" id="closeImportDialog" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+      <p class="dialog-help">Paste a complete server.json, a game.mods object, a mod array, or comma-separated mod objects.</p>
+      <label class="field-block"><span>Preset name</span><input id="importPresetName" type="text" maxlength="80" placeholder="Name from JSON or file"></label>
+      <label class="field-block"><span>JSON</span><textarea id="presetJsonInput" spellcheck="false" placeholder='{ "game": { "mods": [ ... ] } }'></textarea></label>
+      <div class="dialog-actions spread-actions">
+        <div>
+          <button class="button secondary" id="importPresetFile" type="button"><img src="assets/icons/folder-open.svg" alt="">Open file</button>
+          <button class="button secondary" id="pastePresetJson" type="button"><img src="assets/icons/clipboard-paste.svg" alt="">Paste from clipboard</button>
+        </div>
+        <div>
+          <button class="button quiet" id="cancelImportDialog" type="button" data-dialog-close>Cancel</button>
+          <button class="button primary" id="confirmPresetImport" type="submit" value="default">Import</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="modLogsDialog" class="mod-logs-dialog">
+    <div class="dialog-header" id="modLogsDragHandle">
+      <div><span id="modLogsEyebrow">MOD ACTIVITY</span><h2 id="modLogsTitle">Mod logs</h2></div>
+      <button class="icon-button" id="closeModLogsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+    <div class="mod-logs-toolbar">
+      <label class="search-field">
+        <img src="assets/icons/search.svg" alt="">
+        <input id="modLogsSearch" type="search" placeholder="Search" autocomplete="off">
+      </label>
+      <select id="modLogsFilter" aria-label="Filter mod logs"></select>
+    </div>
+    <div class="mod-logs-table-scroll">
+      <div class="mod-log-head">
+        <span id="modLogHeadTime">Time</span><span id="modLogHeadAction">Action</span><span id="modLogHeadMod">Mod</span><span id="modLogHeadPreset">Preset</span><span id="modLogHeadDetails">Details</span><span id="modLogHeadManage">Manage</span>
+      </div>
+      <div id="modLogsList" class="mod-logs-list"></div>
+    </div>
+    <div class="dialog-actions mod-logs-actions">
+      <span id="modLogsSummary"></span>
+      <button class="button quiet danger-text" id="clearModLogs" type="button"><img src="assets/icons/trash-2.svg" alt=""><span>Delete logs</span></button>
+      <button class="button primary" id="closeModLogs" type="button"><span>Close</span></button>
+    </div>
+    <span class="mod-logs-resize-handle" id="modLogsResizeHandle" role="separator" aria-orientation="vertical"></span>
+  </dialog>
+
+  <dialog id="deleteModDialog" class="delete-mod-dialog">
+    <form id="deleteModForm">
+      <div class="dialog-header"><h2 id="deleteModDialogTitle">Permanently delete mod?</h2><button class="icon-button" id="cancelDeleteModTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+      <p class="delete-mod-warning" id="deleteModMessage"></p>
+      <label class="setting-row toggle-row dialog-toggle">
+        <div><strong id="deleteModDontAskLabel">Do not show this warning again</strong></div>
+        <input type="checkbox" id="deleteModDontAsk"><span class="toggle"></span>
+      </label>
+      <div class="dialog-actions"><button class="button quiet" id="cancelDeleteMod" type="button">Cancel</button><button class="button danger delete-mod-confirm" id="confirmDeleteMod" type="submit"><img src="assets/icons/trash-2.svg" alt=""><span>Delete mod</span></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="presetTransferDialog" class="preset-transfer-dialog">
+    <form id="presetTransferForm">
+      <div class="dialog-header"><h2 id="presetTransferTitle">Transfer preset mods</h2><button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
+      <div class="dialog-summary preset-transfer-summary"><strong id="presetTransferName"></strong><small id="presetTransferSummary"></small></div>
+      <div class="preset-transfer-modes">
+        <label class="preset-transfer-mode">
+          <input type="radio" name="presetTransferMode" value="copy" checked>
+          <span><strong id="presetTransferCopyTitle">Copy</strong><small id="presetTransferCopyHelp">Keep the original mods in addons</small></span>
+        </label>
+        <label class="preset-transfer-mode danger-mode">
+          <input type="radio" name="presetTransferMode" value="move">
+          <span><strong id="presetTransferMoveTitle">Move</strong><small id="presetTransferMoveHelp">Delete the original mods from addons after copying</small></span>
+        </label>
+      </div>
+      <p class="delete-mod-warning" id="presetTransferWarning" hidden></p>
+      <p class="dialog-help" id="presetTransferHelp"></p>
+      <div class="dialog-actions"><button class="button quiet" type="button" data-dialog-close id="cancelPresetTransfer">Cancel</button><button class="button primary" id="confirmPresetTransfer" type="submit"><img src="assets/icons/folder-open.svg" alt=""><span>Select folder</span></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="serverJoinDialog" class="server-join-dialog">
+    <form id="serverJoinForm" method="dialog">
+      <div class="dialog-header">
+        <div><span id="serverJoinEyebrow">SERVER CONNECTION</span><h2 id="serverJoinTitle">Connect to server</h2></div>
+        <button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button>
+      </div>
+      <div class="server-join-summary">
+        <strong id="serverJoinName"></strong>
+        <small id="serverJoinAddress"></small>
+        <div id="serverJoinFacts"></div>
+      </div>
+      <label class="setting-row toggle-row server-save-preset-row" id="serverSavePresetRow">
+        <div><strong id="serverSavePresetTitle">Save server mod pack as preset</strong><small id="serverSavePresetHelp">The same server preset will be updated on future connections</small></div>
+        <input type="checkbox" id="serverSavePreset" checked><span class="toggle"></span>
+      </label>
+      <label class="field-block" id="serverPresetNameField">
+        <span id="serverPresetNameLabel">Preset name</span>
+        <input id="serverPresetName" type="text" maxlength="80" autocomplete="off">
+      </label>
+      <p class="dialog-help" id="serverJoinHelp">The main menu will load first. Confirm any mod or password prompts in Arma's built-in server browser.</p>
+      <div class="dialog-actions">
+        <button class="button quiet" type="button" data-dialog-close>Cancel</button>
+        <button class="button secondary" id="forceServerJoin" type="button" hidden><span>Connect anyway</span></button>
+        <button class="button primary" id="confirmServerJoin" type="submit" value="default"><img src="assets/icons/play.svg" alt=""><span>Connect</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="serverConnectionFailureDialog" class="server-connection-failure-dialog" aria-labelledby="serverConnectionFailureTitle">
+    <div class="dialog-header">
+      <div><span id="serverConnectionFailureEyebrow">CONNECTION ERROR</span><h2 id="serverConnectionFailureTitle">Could not connect to the server</h2></div>
+    </div>
+    <div class="server-connection-failure-body">
+      <strong id="serverConnectionFailureServer"></strong>
+      <p id="serverConnectionFailureMessage"></p>
+      <div class="server-connection-failure-log" id="serverConnectionFailureLog" hidden>
+        <span id="serverConnectionFailureLogLabel">Game log</span>
+        <code id="serverConnectionFailureLogPath"></code>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button class="button primary" id="serverConnectionFailureOk" type="button"><span>OK</span></button>
+    </div>
+  </dialog>
+
+  <dialog id="modDetailsDialog" class="mod-details-dialog">
+    <div class="dialog-header mod-details-header">
+      <div><span id="modDetailsSource"></span><h2 id="modDetailsTitle"></h2></div>
+      <button class="icon-button" id="closeModDetailsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+    <div id="modDetailsBody" class="mod-details-body"></div>
+    <div class="dialog-actions mod-details-actions">
+      <button class="button secondary" id="openModDetailsWorkshop" type="button"><img src="assets/icons/external-link.svg" alt=""><span></span></button>
+      <button class="button secondary" id="copyModDetailsJson" type="button" disabled><img src="assets/icons/copy.svg" alt=""><span></span></button>
+      <button class="button primary" id="downloadModDetails" type="button" data-mod-download="" disabled><img src="assets/icons/download.svg" alt=""><span></span></button>
+      <button class="button secondary" id="updateModDetails" type="button" data-mod-update="" hidden><img src="assets/icons/refresh-cw.svg" alt=""><span></span></button>
+      <button class="button primary" id="closeModDetails" type="button"><span></span></button>
+    </div>
+    <div id="imageViewerDialog" class="image-viewer-dialog" hidden>
+      <div id="imageViewerStage" class="image-viewer-stage">
+        <img id="imageViewerImage" alt="" draggable="false" referrerpolicy="no-referrer">
+      </div>
+      <button class="image-viewer-control image-viewer-close" id="closeImageViewer" type="button" title="Close">
+        <img src="assets/icons/x.svg" alt="">
+      </button>
+      <button class="image-viewer-control image-viewer-nav previous" id="imageViewerPrevious" type="button" title="Previous image">
+        <img src="assets/icons/chevron-left.svg" alt="">
+      </button>
+      <button class="image-viewer-control image-viewer-nav next" id="imageViewerNext" type="button" title="Next image">
+        <img src="assets/icons/chevron-right.svg" alt="">
+      </button>
+      <div class="image-viewer-toolbar" role="toolbar">
+        <span id="imageViewerCounter" class="image-viewer-counter"></span>
+        <span class="image-viewer-divider" aria-hidden="true"></span>
+        <button class="image-viewer-control" id="imageViewerZoomOut" type="button" title="Zoom out">
+          <img src="assets/icons/zoom-out.svg" alt="">
+        </button>
+        <span id="imageViewerScale" class="image-viewer-scale">100%</span>
+        <button class="image-viewer-control" id="imageViewerZoomIn" type="button" title="Zoom in">
+          <img src="assets/icons/zoom-in.svg" alt="">
+        </button>
+        <button class="image-viewer-control" id="imageViewerReset" type="button" title="Fit to screen">
+          <img src="assets/icons/maximize.svg" alt="">
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="mandatoryUpdateDialog" class="mandatory-update-dialog" aria-labelledby="mandatoryUpdateTitle">
+    <div class="mandatory-update-header">
+      <span id="mandatoryUpdateEyebrow">REQUIRED UPDATE</span>
+      <h2 id="mandatoryUpdateTitle">Launcher update required</h2>
+      <p id="mandatoryUpdateVersion"></p>
+    </div>
+    <div class="mandatory-update-body">
+      <p id="mandatoryUpdateMessage"></p>
+      <div class="mandatory-update-game" id="mandatoryUpdateGameState">
+        <span class="mandatory-update-game-indicator" aria-hidden="true"></span>
+        <span id="mandatoryUpdateGameText"></span>
+      </div>
+      <div class="mandatory-update-countdown" aria-live="polite">
+        <strong id="mandatoryUpdateCountdown">05:00</strong>
+        <small id="mandatoryUpdateCountdownLabel">Time left to save your progress</small>
+      </div>
+      <p class="mandatory-update-note" id="mandatoryUpdateNote"></p>
+    </div>
+    <div class="dialog-actions mandatory-update-actions">
+      <button class="button secondary" id="mandatoryUpdateAcknowledge" type="button">
+        <span>OK, continue</span>
+      </button>
+      <button class="button primary" id="mandatoryUpdateInstall" type="button">
+        <img src="assets/icons/refresh-cw.svg" alt=""><span>Install now</span>
+      </button>
+    </div>
+  </dialog>
+
+  <div class="file-drop-overlay" id="fileDropOverlay" hidden aria-hidden="true">
+    <div class="file-drop-card">
+      <img src="assets/icons/file-input.svg" alt="">
+      <strong>Drop JSON or TXT here</strong>
+      <span>Release the file to review it before importing</span>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <script src="i18n.js"></script>
+  <script src="confirmationDialog.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
