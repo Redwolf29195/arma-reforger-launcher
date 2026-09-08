@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 'use strict';
 
-// Run with Xvfb as an ordinary user after installing the generated deb.
+// Run with Xvfb as an ordinary user after installing the generated deb, or
+// against an extracted AppImage fixture with a separately configured helper.
 // This starts the real installed application; no app test hooks are introduced.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -35,14 +36,27 @@ async function processTree(parentPid) {
 async function main() {
   assert.equal(process.platform, 'linux', 'The installed package smoke runs on Linux.');
   assert.notEqual(process.getuid(), 0, 'Run this check as an ordinary user, not root.');
-  const [requestedExecutable, requestedScreenshot = 'artifacts/linux-installed.png'] = process.argv.slice(2);
-  assert(requestedExecutable, 'Usage: node scripts/linux-package-smoke.js <installed-executable> [screenshot.png]');
+  const argumentsList = process.argv.slice(2);
+  const extractedAppImage = argumentsList[0] === '--extracted-appimage';
+  if (extractedAppImage) argumentsList.shift();
+  const [requestedExecutable, requestedScreenshot = 'artifacts/linux-installed.png'] = argumentsList;
+  assert(requestedExecutable && argumentsList.length <= 2,
+    'Usage: node scripts/linux-package-smoke.js [--extracted-appimage] <executable-or-AppRun> [screenshot.png]');
   const executable = await fs.realpath(requestedExecutable);
   const installation = path.dirname(executable);
-  assert(executable.startsWith('/opt/'), 'Expected the executable installed by the deb under /opt.');
-  assert.equal((await fs.stat(executable)).uid, 0, 'The installed executable must be root-owned.');
+  if (extractedAppImage) {
+    assert.equal(path.basename(executable), 'AppRun', 'Expected the extracted AppImage AppRun launcher.');
+    assert((await fs.stat(path.join(installation, 'arma-reforger-launcher'))).isFile(),
+      'The extracted AppImage must contain its real application executable.');
+  } else {
+    assert(executable.startsWith('/opt/'), 'Expected the executable installed by the deb under /opt.');
+    assert.equal((await fs.stat(executable)).uid, 0, 'The installed executable must be root-owned.');
+  }
   const sandboxHelper = await fs.stat(path.join(installation, 'chrome-sandbox'));
-  assert.equal(sandboxHelper.uid, 0, 'The installed sandbox helper must be root-owned.');
+  assert.equal(sandboxHelper.uid, 0, 'The sandbox helper must be root-owned.');
+  if (extractedAppImage) {
+    assert.equal(sandboxHelper.mode & 0o7777, 0o4755, 'Configure the extracted fixture helper with mode 4755 before this check.');
+  }
   await fs.access(path.join(installation, 'resources', 'app.asar'));
   await fs.access(path.join(installation, 'resources', 'launcher-addons', 'ALGZLauncherWorkshopBridge', 'Scripts', 'Game', 'ALGZLauncherWorkshopBridge.c'));
   const screenshot = path.resolve(requestedScreenshot);
@@ -56,7 +70,7 @@ async function main() {
     XDG_DATA_HOME: path.join(temporaryHome, '.local/share'),
     STEAM_PATH: path.join(temporaryHome, 'steam-not-installed')
   };
-  for (const key of ['ELECTRON_RUN_AS_NODE', 'ELECTRON_DISABLE_SANDBOX', 'NODE_OPTIONS']) delete environment[key];
+  for (const key of ['ELECTRON_RUN_AS_NODE', 'ELECTRON_DISABLE_SANDBOX', 'NODE_OPTIONS', 'APPDIR', 'APPIMAGE', 'APPIMAGE_EXTRACT_AND_RUN']) delete environment[key];
   const child = spawn(executable, ['--disable-gpu', '--ozone-platform=x11'], {
     env: environment, detached: true, stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -98,9 +112,12 @@ async function main() {
     execFileSync('import', ['-window', windowId, screenshot]);
     assert((await fs.stat(screenshot)).size > 1000, 'The screenshot is unexpectedly small.');
     const report = {
+      distribution: extractedAppImage ? 'extracted-appimage' : 'installed-deb',
       executable, title, screenshot, normalUser: true, isolatedHome: true,
       rendererCount: renderers.length, rendererSandbox: { seccomp: true, noNewPrivileges: true, effectiveCapabilities: '0' },
       sandboxHelper: { ownerUid: sandboxHelper.uid, mode: (sandboxHelper.mode & 0o7777).toString(8) },
+      portableMountTested: false,
+      extractedFixtureHelperConfigured: extractedAppImage,
       gameLaunchTested: false
     };
     await fs.writeFile(screenshot.replace(/\.png$/i, '') + '.json', `${JSON.stringify(report, null, 2)}\n`);

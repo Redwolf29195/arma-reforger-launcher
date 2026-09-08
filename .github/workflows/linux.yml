@@ -76,13 +76,25 @@ jobs:
           test "${#images[@]}" -eq 1
           extracted="$(mktemp -d "$RUNNER_TEMP/launcher-appimage.XXXXXX")"
           image="$PWD/${images[0]}"
-          (cd "$extracted" && "$image" --appimage-extract AppRun && "$image" --appimage-extract '*.desktop')
+          (cd "$extracted" && "$image" --appimage-extract > /dev/null)
           test -x "$extracted/squashfs-root/AppRun"
           grep -F 'exec "$APPDIR/arma-reforger-launcher" "$@"' "$extracted/squashfs-root/AppRun"
-          if grep -r -e '--no-sandbox' -e 'NO_SANDBOX' "$extracted/squashfs-root"; then
+          desktops=("$extracted/squashfs-root/"*.desktop)
+          test "${#desktops[@]}" -ge 1
+          if grep -e '--no-sandbox' -e 'NO_SANDBOX' "$extracted/squashfs-root/AppRun" "${desktops[@]}"; then
             echo 'The AppImage must not disable the Chromium sandbox.' >&2
             exit 1
           fi
+          echo "APPIMAGE_SMOKE_ROOT=$extracted/squashfs-root" >> "$GITHUB_ENV"
+      - name: Run the extracted AppImage payload with its sandbox enabled
+        run: |
+          # This helper belongs only to the disposable extracted CI fixture.
+          # Mounted AppImages still need user namespaces allowed by the host.
+          sudo chown root:root "$APPIMAGE_SMOKE_ROOT/chrome-sandbox"
+          sudo chmod 4755 "$APPIMAGE_SMOKE_ROOT/chrome-sandbox"
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- \
+            node scripts/linux-package-smoke.js --extracted-appimage \
+            "$APPIMAGE_SMOKE_ROOT/AppRun" artifacts/linux-appimage.png
       - name: Install the Debian package
         run: |
           mapfile -t packages < <(find dist-local -maxdepth 2 -type f -name '*-linux-x64.deb')

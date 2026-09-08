@@ -68,9 +68,9 @@ The portable alternative is `Arma-Reforger-Launcher-0.3.44-linux-x64.AppImage`; 
 
 Переносной вариант — `Arma-Reforger-Launcher-0.3.44-linux-x64.AppImage`. Перед запуском разрешите выполнение файла. Для AppImage нужны FUSE 2 и доступная песочница Chromium. Если Ubuntu/Mint блокирует её, установите `.deb`. Обновления Linux скачиваются вручную со страницы релизов; автоматическое обновление Windows работает отдельно.
 
-Select ordinary Linux paths in the launcher's Settings; it translates managed paths for Proton. Advanced filesystem arguments entered manually must use Wine paths, for example `Z:\\home\\user\\GameProfile`. The initial supported setup uses native Steam; discovery includes Flatpak libraries, but Flatpak's filesystem permissions and SteamOS are not validated here.
+Select ordinary Linux paths in the launcher's Settings; it translates managed paths for Proton. Advanced filesystem arguments entered manually must use Wine paths, for example `Z:\home\user\GameProfile`. The initial supported setup uses native Steam; discovery includes Flatpak libraries, but Flatpak's filesystem permissions and SteamOS are not validated here.
 
-В настройках лаунчера выбирайте обычные Linux-пути — необходимые пути для Proton преобразуются автоматически. Пути в дополнительных аргументах, введённых вручную, должны иметь формат Wine, например `Z:\\home\\user\\GameProfile`. Основной вариант — обычный Steam. Поиск также видит библиотеки Flatpak, но его разрешения на папки и SteamOS здесь не проверены.
+В настройках лаунчера выбирайте обычные Linux-пути — необходимые пути для Proton преобразуются автоматически. Пути в дополнительных аргументах, введённых вручную, должны иметь формат Wine, например `Z:\home\user\GameProfile`. Основной вариант — обычный Steam. Поиск также видит библиотеки Flatpak, но его разрешения на папки и SteamOS здесь не проверены.
 
 CI does not own or start Arma Reforger. Automated validation covers the launcher, packages and simulated Steam/Proton lifecycle, including crash/exit handling. Actual gameplay, Workshop network downloads and multiplayer compatibility still require a game session on Linux. See [Valve's Proton documentation](https://github.com/ValveSoftware/Proton) for the compatibility layer.
 

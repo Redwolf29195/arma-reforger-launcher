@@ -20,7 +20,7 @@
     "dist:win:public-unsigned": "node scripts/prepare-build.js --public-unsigned && electron-builder --win portable nsis --config.directories.output=dist-public-unsigned/${version} && node scripts/sign-release-artifacts.js --root dist-public-unsigned",
     "release:win:public-unsigned": "node scripts/release-public-unsigned.js",
     "release:audit:public-unsigned": "node scripts/release-public-unsigned.js --reuse-build",
-    "dist:linux": "node scripts/prepare-build.js && electron-builder --linux AppImage deb --publish never",
+    "dist:linux": "node scripts/prepare-build.js && electron-builder --linux AppImage deb --x64 --publish never",
     "dist:mac": "node scripts/prepare-build.js && electron-builder --mac dmg",
     "build:prepare": "node scripts/prepare-build.js",
     "release:sign:artifacts": "node scripts/sign-release-artifacts.js"
@@ -82,14 +82,20 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
       ],
       "executableName": "arma-reforger-launcher",
       "maintainer": "ALGZ / ExtaZzZ",
       "category": "Game",
       "icon": ".build/app/src/renderer/assets/app-icon.png",
-      "artifactName": "Arma-Reforger-Launcher-${version}-linux-${arch}.${ext}",
+      "artifactName": "Arma-Reforger-Launcher-${version}-linux-x64.${ext}",
       "executableArgs": []
     },
     "appImage": {
