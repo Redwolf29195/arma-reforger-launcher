@@ -7,14 +7,27 @@ const {
   PROTECTED_UPDATE_CONFIG_RELATIVE_PATH,
   UPDATE_CACHE_DIRECTORY_NAME,
   createProtectedUpdateConfig,
-  createUpdateTrustPolicy,
+  createUpdateTrustPolicy: createPlatformUpdateTrustPolicy,
   resolveProtectedUpdateConfigPath,
   selectSignedInstallerUpdate,
   serializeProtectedUpdateConfig
 } = require('../src/main/updateTrust');
 
+const createUpdateTrustPolicy = (options) => createPlatformUpdateTrustPolicy({ platform: 'win32', ...options });
+
 const projectRoot = path.resolve(__dirname, '..');
 const packagedAppPath = path.join('C:\\', 'Program Files', 'ALGZ', 'resources', 'app.asar');
+
+test('Linux never enables the Windows NSIS update channel, even with copied public metadata', () => {
+  for (const releaseTier of ['public', 'public-unsigned', 'community']) {
+    const policy = createPlatformUpdateTrustPolicy({
+      platform: 'linux', packaged: true, appPath: '/opt/arma-launcher/resources/app.asar',
+      buildIdentity: { releaseTier, windowsPublisher: 'CN=ALGZ', windowsCertificateThumbprint: 'A'.repeat(40) }
+    });
+    assert.equal(policy.enabled, false);
+    assert.equal(policy.verificationMode, 'disabled');
+  }
+});
 
 test('explicit public distribution metadata enables signed NSIS updates', () => {
   const policy = createUpdateTrustPolicy({

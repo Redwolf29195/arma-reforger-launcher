@@ -3,6 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
+const { discoverLinuxSteam, findLinuxGameProfileDirectories, linuxSteamRootCandidates } = require('./steamLinux');
 
 const execFileAsync = promisify(execFile);
 
@@ -23,9 +24,9 @@ async function isFile(filePath) {
   }
 }
 
-function defaultAddonsCandidates() {
-  const home = os.homedir();
-  if (process.platform === 'win32') {
+function defaultAddonsCandidates(options = {}) {
+  const home = options.homeDirectory || os.homedir();
+  if ((options.platform || process.platform) === 'win32') {
     return [
       path.join(home, 'Documents', 'My Games', 'ArmaReforger', 'addons'),
       path.join(home, 'OneDrive', 'Documents', 'My Games', 'ArmaReforger', 'addons')
@@ -38,9 +39,12 @@ function defaultAddonsCandidates() {
   ];
 }
 
-function steamRootCandidates() {
-  const home = os.homedir();
-  if (process.platform === 'win32') {
+function steamRootCandidates(options = {}) {
+  const home = options.homeDirectory || os.homedir();
+  const platform = options.platform || process.platform;
+  if (options.steamRoots) return options.steamRoots;
+  if (platform === 'linux') return linuxSteamRootCandidates(options);
+  if (platform === 'win32') {
     return [
       process.env['ProgramFiles(x86)'] ? path.join(process.env['ProgramFiles(x86)'], 'Steam') : '',
       process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'Steam') : '',
@@ -66,13 +70,13 @@ async function readSteamLibraries(steamRoot) {
       libraries.add(match[1].replace(/\\\\/g, '\\'));
     }
   } catch {
-    // Steam may not be installed in this candidate.
+    // Preserve the existing Windows/macOS discovery behavior.
   }
   return [...libraries];
 }
 
-function executableName() {
-  return process.platform === 'win32' ? 'ArmaReforgerSteam.exe' : 'ArmaReforgerSteam';
+function executableName(platform = process.platform) {
+  return platform === 'win32' || platform === 'linux' ? 'ArmaReforgerSteam.exe' : 'ArmaReforgerSteam';
 }
 
 function normalizeConfiguredPath(value) {
@@ -112,15 +116,16 @@ async function steamRegistryRoots() {
   return roots;
 }
 
-async function findSteamExecutable(preferredGamePath = '') {
+async function findSteamExecutable(preferredGamePath = '', options = {}) {
+  const platform = options.platform || process.platform;
   const preferredRoot = steamRootFromGamePath(preferredGamePath);
   const roots = [...new Set([
     preferredRoot,
-    ...await steamRegistryRoots(),
-    ...steamRootCandidates()
+    ...(platform === 'win32' ? await steamRegistryRoots() : []),
+    ...steamRootCandidates(options)
   ].filter(Boolean))];
 
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     for (const root of roots) {
       const candidate = path.join(root, 'steam.exe');
       if (await isFile(candidate)) return candidate;
@@ -128,7 +133,7 @@ async function findSteamExecutable(preferredGamePath = '') {
     return '';
   }
 
-  const candidates = process.platform === 'darwin'
+  const candidates = platform === 'darwin'
     ? ['/Applications/Steam.app/Contents/MacOS/steam_osx']
     : ['/usr/bin/steam', '/usr/games/steam', ...roots.map((root) => path.join(root, 'steam.sh'))];
   for (const candidate of candidates) {
@@ -137,11 +142,11 @@ async function findSteamExecutable(preferredGamePath = '') {
   return '';
 }
 
-function configuredExecutableCandidates(value) {
+function configuredExecutableCandidates(value, options = {}) {
   const configuredPath = normalizeConfiguredPath(value);
   if (!configuredPath) return [];
 
-  const executable = executableName();
+  const executable = executableName(options.platform || process.platform);
   return [...new Set([
     configuredPath,
     path.join(configuredPath, executable),
@@ -149,27 +154,34 @@ function configuredExecutableCandidates(value) {
   ])];
 }
 
-async function resolveGameExecutable(value) {
-  const expectedName = executableName().toLowerCase();
-  for (const candidate of configuredExecutableCandidates(value)) {
+async function resolveGameExecutable(value, options = {}) {
+  const expectedName = executableName(options.platform || process.platform).toLowerCase();
+  for (const candidate of configuredExecutableCandidates(value, options)) {
     if (path.basename(candidate).toLowerCase() !== expectedName) continue;
     if (await isFile(candidate)) return candidate;
   }
   return '';
 }
 
-async function findGameExecutable(preferredPath = '') {
-  const preferredExecutable = await resolveGameExecutable(preferredPath);
+async function findGameExecutable(preferredPath = '', options = {}) {
+  const platform = options.platform || process.platform;
+  const preferredExecutable = await resolveGameExecutable(preferredPath, options);
   if (preferredExecutable) return preferredExecutable;
 
+  if (platform === 'linux') {
+    const roots = [steamRootFromGamePath(preferredPath), ...steamRootCandidates(options)].filter(Boolean);
+    const discovery = await discoverLinuxSteam({ ...options, steamRoots: roots });
+    return discovery.installations[0]?.gameExecutable || '';
+  }
+
   const candidates = [];
-  for (const steamRoot of steamRootCandidates()) {
+  for (const steamRoot of steamRootCandidates(options)) {
     for (const library of await readSteamLibraries(steamRoot)) {
-      candidates.push(path.join(library, 'steamapps', 'common', 'Arma Reforger', executableName()));
+      candidates.push(path.join(library, 'steamapps', 'common', 'Arma Reforger', executableName(platform)));
     }
   }
 
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     for (let code = 'C'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code += 1) {
       const drive = String.fromCharCode(code);
       candidates.push(`${drive}:\\SteamLibrary\\steamapps\\common\\Arma Reforger\\ArmaReforgerSteam.exe`);
@@ -183,11 +195,26 @@ async function findGameExecutable(preferredPath = '') {
   return '';
 }
 
-async function findAddonsDirectory() {
-  for (const candidate of defaultAddonsCandidates()) {
+async function findAddonsDirectory(preferredGamePath = '', options = {}) {
+  if (preferredGamePath && typeof preferredGamePath === 'object') {
+    options = preferredGamePath;
+    preferredGamePath = '';
+  }
+  if ((options.platform || process.platform) === 'linux') {
+    const profiles = await findLinuxGameProfileDirectories(preferredGamePath, options);
+    if (preferredGamePath && profiles.length) return path.join(profiles[0], 'addons');
+    for (const profile of profiles) {
+      const addons = path.join(profile, 'addons');
+      try { if ((await fs.stat(addons)).isDirectory()) return addons; } catch { /* Try next profile. */ }
+    }
+    // Keep future Workshop downloads in the discovered game's profile even before
+    // its first mod download has created the addons directory.
+    if (profiles.length) return path.join(profiles[0], 'addons');
+  }
+  for (const candidate of defaultAddonsCandidates(options)) {
     if (await exists(candidate)) return candidate;
   }
-  return defaultAddonsCandidates()[0];
+  return defaultAddonsCandidates(options)[0];
 }
 
 module.exports = {

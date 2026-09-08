@@ -45,6 +45,7 @@ function runtime(options = {}) {
     path, Promise, Date, Error, Math,
     settingsStore: { get: () => settings, update: async patch => Object.assign(settings, patch) },
     findGameExecutable: async () => settings.gameExecutable,
+    findLinuxGameProfileDirectories: async () => options.protonProfiles || [],
     resolveGameExecutable: async () => ({ settings, gameExecutable: settings.gameExecutable }),
     isArmaReforgerRunning: async () => false,
     installedMods, scanMods: async () => installedMods,
@@ -121,6 +122,13 @@ test('main includes the native Linux profile location when selecting settings so
   const app = runtime({ platform: 'linux' });
   await app.context.prepareGameProfile(app.settings);
   assert.equal(app.syncCalls[0].sourceProfileDirectories[3], path.join(app.userHome, '.local', 'share', 'ArmaReforger'));
+});
+
+test('Linux launch imports settings from the selected Proton profile before native fallbacks', async () => {
+  const protonProfiles = [path.join(os.tmpdir(), 'mock-proton-prefix', 'drive_c', 'users', 'steamuser', 'Documents', 'My Games', 'ArmaReforger')];
+  const app = runtime({ platform: 'linux', protonProfiles });
+  await app.context.prepareGameProfile(app.settings);
+  assert.equal(app.syncCalls[0].sourceProfileDirectories[0], protonProfiles[0]);
 });
 
 const routes = [

@@ -15,6 +15,26 @@ const MAX_LOG_READ_BYTES = 1024 * 1024;
 const LOG_HEADER_READ_BYTES = 16 * 1024;
 const LOG_START_TOLERANCE_MS = 2000;
 
+async function resolveServerLogsDirectories(options = {}) {
+  if (options.logsDirectory) return [String(options.logsDirectory)];
+  const platform = options.platform || process.platform;
+  const nativePath = platform === 'win32' ? path.win32 : path.posix;
+  const directories = [];
+  if (options.profileDirectory) {
+    directories.push(nativePath.join(options.profileDirectory, 'logs', 'server-join'));
+    directories.push(nativePath.join(options.profileDirectory, 'logs'));
+    return directories;
+  }
+  if (platform === 'linux') {
+    const findProfiles = options.findProfileDirectories || require('./steamLinux').findLinuxGameProfileDirectories;
+    const profiles = await findProfiles(options.gameExecutable || '', options.discoveryOptions || {});
+    directories.push(...profiles.map((directory) => nativePath.join(directory, 'logs')));
+  } else if (directories.length === 0) {
+    directories.push(DEFAULT_LOGS_DIRECTORY);
+  }
+  return [...new Set(directories)];
+}
+
 function normalizedEndpoint(value) {
   return String(value || '').trim().toLocaleLowerCase('en');
 }
@@ -165,11 +185,15 @@ async function collectConsoleLogs(logsDirectory) {
 }
 
 async function inspectServerLaunchLogs(options = {}) {
-  const logsDirectory = String(options.logsDirectory || DEFAULT_LOGS_DIRECTORY);
   const serverAddress = String(options.serverAddress || '').trim();
   const startedAt = Number(options.startedAt);
   const minimumMtime = Number.isFinite(startedAt) ? startedAt : Date.now();
-  const collected = await collectConsoleLogs(logsDirectory);
+  const logsDirectories = await resolveServerLogsDirectories(options);
+  const scans = await Promise.all(logsDirectories.map(collectConsoleLogs));
+  const collected = {
+    logPaths: [...new Set(scans.flatMap((scan) => scan.logPaths))],
+    errors: scans.flatMap((scan) => scan.errors)
+  };
   const errors = [...collected.errors];
   const candidates = [];
 
@@ -206,7 +230,6 @@ async function inspectServerLaunchLogs(options = {}) {
 }
 
 function createServerLaunchMonitor(options = {}) {
-  const logsDirectory = String(options.logsDirectory || DEFAULT_LOGS_DIRECTORY);
   const serverAddress = String(options.serverAddress || '').trim();
   const suppliedStartedAt = Number(options.startedAt);
   const startedAt = Number.isFinite(suppliedStartedAt) ? suppliedStartedAt : Date.now();
@@ -247,7 +270,7 @@ function createServerLaunchMonitor(options = {}) {
     timer = setTimeout(() => {
       timer = null;
       const scanGeneration = generation;
-      void inspectServerLaunchLogs({ logsDirectory, serverAddress, startedAt })
+      void inspectServerLaunchLogs({ ...options, serverAddress, startedAt })
         .then((result) => {
           if (!active || scanGeneration !== generation || Date.now() >= deadline) {
             stop();
@@ -294,5 +317,6 @@ module.exports = {
   inspectServerLaunchLogs,
   parseLogStartedAtUtc,
   parseServerLaunchFailure,
-  readLogSample
+  readLogSample,
+  resolveServerLogsDirectories
 };

@@ -17,7 +17,7 @@ function resolveProtectedUpdateConfigPath(appPath) {
   return path.join(path.resolve(source), PROTECTED_UPDATE_CONFIG_RELATIVE_PATH);
 }
 
-function createUpdateTrustPolicy({ appPath, packaged, buildIdentity, portableExecutableFile } = {}) {
+function createUpdateTrustPolicy({ appPath, packaged, buildIdentity, portableExecutableFile, platform = process.platform } = {}) {
   const resolvedAppPath = path.resolve(String(appPath || '').trim() || '.');
   const portable = Boolean(String(portableExecutableFile || '').trim());
   // An explicit distribution setting opts into official updates; it is not
@@ -30,7 +30,9 @@ function createUpdateTrustPolicy({ appPath, packaged, buildIdentity, portableExe
     && buildIdentity?.releaseTier === 'public-unsigned';
   const packagedAsarLayout = path.basename(resolvedAppPath).toLowerCase() === 'app.asar';
   const officialUpdateChannel = publicBuild || unsignedPublicBuild;
-  const enabled = officialUpdateChannel && packagedAsarLayout && !portable;
+  // This channel authenticates and installs Windows NSIS packages only.
+  // Linux distributions use the separate AppImage/deb downloads.
+  const enabled = platform === 'win32' && officialUpdateChannel && packagedAsarLayout && !portable;
 
   return Object.freeze({
     enabled,

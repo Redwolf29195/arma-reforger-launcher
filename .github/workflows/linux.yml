@@ -1,0 +1,108 @@
+name: Linux builds
+
+on:
+  push:
+    branches: [linux-support]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: ${{ matrix.os }} / x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            gtk: libgtk-3-0
+            audio: libasound2
+            fuse: libfuse2
+          - os: ubuntu-24.04
+            gtk: libgtk-3-0t64
+            audio: libasound2t64
+            fuse: libfuse2t64
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ALGZ_RELEASE_PRIVATE_KEY_FILE: ${{ runner.temp }}/missing-release-private-key.pem
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth dbus-x11 xdotool imagemagick \
+            libnss3 libgbm1 libxss1 libxtst6 libnotify4 libsecret-1-0 \
+            apparmor apparmor-utils ${{ matrix.gtk }} ${{ matrix.audio }} ${{ matrix.fuse }}
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit public source
+        run: node scripts/audit-public-source.js
+      - name: Unit tests
+        run: pnpm test
+      - name: Configure the CI Electron sandbox helper
+        run: |
+          helper="$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")"
+          sudo chown root:root "$helper"
+          sudo chmod 4755 "$helper"
+      - name: Electron UI smoke with sandbox enabled
+        run: |
+          mkdir -p artifacts
+          xvfb-run -a dbus-run-session -- pnpm exec electron tests/uiSmoke.js "$PWD/artifacts/linux-ui.png"
+          xvfb-run -a dbus-run-session -- pnpm exec electron tests/serverUiSmoke.js "$PWD/artifacts/linux-servers.png"
+      - name: Build separate Linux packages without a signing key
+        run: pnpm run dist:linux
+      - name: Check the packaged AppImage launcher
+        run: |
+          shopt -s nullglob
+          images=(dist-local/*/*-linux-x64.AppImage)
+          test "${#images[@]}" -eq 1
+          extracted="$(mktemp -d "$RUNNER_TEMP/launcher-appimage.XXXXXX")"
+          image="$PWD/${images[0]}"
+          (cd "$extracted" && "$image" --appimage-extract AppRun '*.desktop')
+          test -x "$extracted/squashfs-root/AppRun"
+          grep -F 'exec "$APPDIR/arma-reforger-launcher" "$@"' "$extracted/squashfs-root/AppRun"
+          if grep -r -e '--no-sandbox' -e 'NO_SANDBOX' "$extracted/squashfs-root"; then
+            echo 'The AppImage must not disable the Chromium sandbox.' >&2
+            exit 1
+          fi
+      - name: Install the Debian package
+        run: |
+          mapfile -t packages < <(find dist-local -maxdepth 2 -type f -name '*-linux-x64.deb')
+          test "${#packages[@]}" -eq 1
+          sudo apt-get install -y "./${packages[0]}"
+      - name: Run the installed package as an ordinary user
+        run: |
+          test "$(id -u)" -ne 0
+          xvfb-run -a dbus-run-session -- node scripts/linux-package-smoke.js \
+            "$(command -v arma-reforger-launcher)" artifacts/linux-installed.png
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-linux-x64-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            dist-local/*/*-linux-x64.AppImage
+            dist-local/*/*-linux-x64.deb
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-linux-smoke-${{ matrix.os }}
+          if-no-files-found: ignore
+          path: artifacts/

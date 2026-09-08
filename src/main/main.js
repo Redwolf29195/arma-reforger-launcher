@@ -23,6 +23,7 @@ const { spawn } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 
 const { findAddonsDirectory, findGameExecutable, findSteamExecutable } = require('../core/gameLocator');
+const { findLinuxGameProfileDirectories } = require('../core/steamLinux');
 const { isArmaReforgerRunning, isSteamRunning } = require('../core/gameProcess');
 const { assessPreset, getMissingPresetMods, resolvePresetDependencies, scanMods } = require('../core/modScanner');
 const { toServerModText, toServerModsText } = require('../core/presetParser');
@@ -1242,6 +1243,9 @@ function wait(milliseconds) {
 }
 
 async function launchWithExactArguments(gameExecutable, gameArguments, purpose = 'game', isCancelled = () => false) {
+  // Proton is selected and initialized by Steam. A Windows executable cannot
+  // be spawned as a native Linux process, even when Steam is already running.
+  if (process.platform === 'linux') return launchThroughSteam(gameExecutable, gameArguments, isCancelled);
   const steamExecutable = await findSteamExecutable(gameExecutable);
   if (isCancelled()) return { cancelled: true };
   if (steamExecutable) {
@@ -1297,7 +1301,10 @@ async function validateWorkshopBridge() {
 async function prepareGameProfile(settings) {
   if (!settings.profileDirectory) throw new Error(mainT('workshopPathsMissing'));
   const userHome = app.getPath('home');
+  const protonProfiles = process.platform === 'linux'
+    ? await findLinuxGameProfileDirectories(settings.gameExecutable, { homeDirectory: userHome }) : [];
   const sourceProfileDirectories = [
+    ...protonProfiles,
     path.join(app.getPath('documents'), 'My Games', 'ArmaReforger'),
     path.join(userHome, 'Documents', 'My Games', 'ArmaReforger'),
     path.join(userHome, 'OneDrive', 'Documents', 'My Games', 'ArmaReforger'),
@@ -1409,6 +1416,8 @@ function registerGameHandlers() {
     const workshopState = await syncWorkshopSelection({
       profileDirectory: settings.profileDirectory,
       fallbackProfileDirectories: [
+        ...(process.platform === 'linux'
+          ? await findLinuxGameProfileDirectories(gameExecutable, { homeDirectory: app.getPath('home') }) : []),
         settings.downloadRoot,
         settings.addonsDirectory ? path.dirname(settings.addonsDirectory) : ''
       ],
@@ -1619,6 +1628,7 @@ app.whenReady().then(async () => {
   updateTrustPolicy = createUpdateTrustPolicy({
     appPath: app.getAppPath(),
     packaged: app.isPackaged,
+    platform: process.platform,
     buildIdentity,
     portableExecutableFile: process.env.PORTABLE_EXECUTABLE_FILE
   });

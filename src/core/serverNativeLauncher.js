@@ -33,6 +33,8 @@ async function resolveNativeServerAddress(value, options = {}) {
 // Dependency-injected so cancellation, Steam failures, and request cleanup can
 // be tested without starting a game or changing a real player's profile.
 function createNativeServerLauncher(dependencies) {
+  const platform = dependencies.platform || process.platform;
+  const nativePath = platform === 'win32' ? path.win32 : path.posix;
   const prepareRequest = dependencies.prepareRequest || prepareServerJoinRequest;
   const cancelRequest = dependencies.cancelRequest || cancelServerJoinRequest;
   const resolveAddress = dependencies.resolveAddress || resolveNativeServerAddress;
@@ -60,8 +62,8 @@ function createNativeServerLauncher(dependencies) {
       for (const directory of [
         settings.profileDirectory,
         settings.downloadRoot,
-        path.join(settings.downloadRoot, 'temp'),
-        path.join(settings.profileDirectory, 'logs', 'server-join')
+        nativePath.join(settings.downloadRoot, 'temp'),
+        nativePath.join(settings.profileDirectory, 'logs', 'server-join')
       ]) {
         await mkdir(directory);
         if (isCancelled()) return cancelled();
@@ -74,6 +76,7 @@ function createNativeServerLauncher(dependencies) {
         return cancelled();
       }
       const args = buildServerConnectArguments({
+        platform,
         settings,
         serverAddress: connection.server.address,
         bridgeDirectory: bridge.addonsDirectory,

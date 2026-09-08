@@ -9,7 +9,8 @@ const {
   createServerLaunchMonitor,
   inspectServerLaunchLogs,
   parseServerLaunchFailure,
-  readLogSample
+  readLogSample,
+  resolveServerLogsDirectories
 } = require('../src/core/serverLaunchMonitor');
 
 const SERVER_ADDRESS = '45.143.199.198:2001';
@@ -51,6 +52,31 @@ test('parses the real server-launch failure signatures and prefers the specific 
     '20:34:01.829 ENGINE    (E): Unable to initialize the game'
   ]);
   assert.equal(parseServerLaunchFailure(initializationFailure, SERVER_ADDRESS), 'initialization-failed');
+});
+
+test('Linux default log discovery uses native Proton profile directories', async () => {
+  const calls = [];
+  const directories = await resolveServerLogsDirectories({
+    platform: 'linux', gameExecutable: '/mnt/Steam/steamapps/common/Arma Reforger/ArmaReforgerSteam.exe',
+    findProfileDirectories: async (...args) => {
+      calls.push(args);
+      return ['/mnt/Steam/steamapps/compatdata/1874880/pfx/drive_c/users/steamuser/Documents/My Games/ArmaReforger'];
+    }
+  });
+  assert.deepEqual(directories, ['/mnt/Steam/steamapps/compatdata/1874880/pfx/drive_c/users/steamuser/Documents/My Games/ArmaReforger/logs']);
+  assert.equal(calls[0][0], '/mnt/Steam/steamapps/common/Arma Reforger/ArmaReforgerSteam.exe');
+  assert.equal(directories.some((directory) => directory.startsWith('Z:')), false);
+});
+
+test('an explicit native logs directory takes precedence over Proton discovery', async () => {
+  assert.deepEqual(await resolveServerLogsDirectories({
+    platform: 'linux', logsDirectory: '/home/user/Launcher Profile/logs/server-join',
+    findProfileDirectories: () => { throw new Error('Do not scan unrelated default profiles'); }
+  }), ['/home/user/Launcher Profile/logs/server-join']);
+});
+
+test('Linux discovery without an initialized Proton prefix does not scan a Windows fallback', async () => {
+  assert.deepEqual(await resolveServerLogsDirectories({ platform: 'linux', findProfileDirectories: async () => [] }), []);
 });
 
 test('does not treat game creation as success or inspect a different client endpoint', () => {
@@ -137,7 +163,11 @@ test('ignores old logs and a different endpoint, then reports a matching nested 
 
   const failures = [];
   const errors = [];
-  const failure = new Promise((resolve) => {
+  const failure = new Promise((resolve, reject) => {
+    // The production monitor intentionally unrefs its polling timer. A bounded
+    // referenced test timer keeps this assertion alive without changing that.
+    const timeout = setTimeout(() => reject(new Error('Expected matching launch failure was not reported')), 1500);
+    t.after(() => clearTimeout(timeout));
     createServerLaunchMonitor({
       logsDirectory,
       serverAddress: SERVER_ADDRESS,
@@ -145,6 +175,7 @@ test('ignores old logs and a different endpoint, then reports a matching nested 
       intervalMs: 10,
       timeoutMs: 1000,
       onFailure: (details) => {
+        clearTimeout(timeout);
         failures.push(details);
         resolve(details);
       },

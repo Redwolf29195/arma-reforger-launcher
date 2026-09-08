@@ -6,6 +6,7 @@ function harness(overrides = {}) {
   const calls = { mkdir: [], prepare: [], cancel: [], steam: [] };
   const request = { token: 'a'.repeat(32), requestPath: 'request', statusPath: 'status', startedAt: Date.now() };
   const dependencies = {
+    platform: 'win32',
     mkdir: async (directory) => calls.mkdir.push(directory),
     prepareBridge: async () => ({ addonsDirectory: 'B:\\Profile\\profile\\addons' }),
     prepareRequest: async (...args) => { calls.prepare.push(args); return request; },
@@ -168,4 +169,25 @@ test('failed, non-IPv4, or unresponsive DNS cannot leave a pending join request'
   await assert.rejects(launch(game, connection), /DNS failure/);
   assert.equal(calls.prepare.length, 0);
   assert.equal(calls.steam.length, 0);
+});
+
+test('Linux native joining writes native profile paths but passes Wine paths only to Steam', async () => {
+  const linuxGame = {
+    gameExecutable: '/mnt/Steam Library/steamapps/common/Arma Reforger/ArmaReforgerSteam.exe',
+    settings: { profileDirectory: '/home/user/Launcher Profile', downloadRoot: '/mnt/Workshop Mods' }
+  };
+  const { launch, calls } = harness({
+    platform: 'linux',
+    prepareBridge: async () => ({ addonsDirectory: '/home/user/Launcher Profile/profile/addons' })
+  });
+  const result = await launch(linuxGame, connection);
+  assert.deepEqual(calls.prepare, [[linuxGame.settings.profileDirectory, connection.server.address]]);
+  assert.deepEqual(calls.mkdir, [
+    '/home/user/Launcher Profile', '/mnt/Workshop Mods', '/mnt/Workshop Mods/temp',
+    '/home/user/Launcher Profile/logs/server-join'
+  ]);
+  assert.equal(calls.steam.length, 1);
+  assert.equal(calls.steam[0][0], linuxGame.gameExecutable);
+  assert.equal(calls.steam[0][1][1], 'Z:\\home\\user\\Launcher Profile');
+  assert.equal(result.arguments[result.arguments.indexOf('-logsDir') + 1], 'Z:\\home\\user\\Launcher Profile\\logs\\server-join');
 });
