@@ -32,7 +32,7 @@ jobs:
             fuse: libfuse2t64
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      ALGZ_RELEASE_PRIVATE_KEY_FILE: ${{ runner.temp }}/missing-release-private-key.pem
+      ALGZ_RELEASE_PRIVATE_KEY_FILE: /tmp/algz-missing-release-private-key.pem
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
