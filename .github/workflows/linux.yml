@@ -57,14 +57,16 @@ jobs:
         run: pnpm test
       - name: Configure the CI Electron sandbox helper
         run: |
-          helper="$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")"
+          node -e "require('electron')"
+          helper="$(node -p "require('node:path').join(require('node:path').dirname(require.resolve('electron/package.json')), 'dist', 'chrome-sandbox')")"
+          test -f "$helper"
           sudo chown root:root "$helper"
           sudo chmod 4755 "$helper"
       - name: Electron UI smoke with sandbox enabled
         run: |
           mkdir -p artifacts
-          xvfb-run -a dbus-run-session -- pnpm exec electron tests/uiSmoke.js "$PWD/artifacts/linux-ui.png"
-          xvfb-run -a dbus-run-session -- pnpm exec electron tests/serverUiSmoke.js "$PWD/artifacts/linux-servers.png"
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/uiSmoke.js "$PWD/artifacts/linux-ui.png"
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/serverUiSmoke.js "$PWD/artifacts/linux-servers.png"
       - name: Build separate Linux packages without a signing key
         run: pnpm run dist:linux
       - name: Check the packaged AppImage launcher
@@ -89,7 +91,7 @@ jobs:
       - name: Run the installed package as an ordinary user
         run: |
           test "$(id -u)" -ne 0
-          xvfb-run -a dbus-run-session -- node scripts/linux-package-smoke.js \
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- node scripts/linux-package-smoke.js \
             "$(command -v arma-reforger-launcher)" artifacts/linux-installed.png
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
