@@ -74,7 +74,7 @@ jobs:
           test "${#images[@]}" -eq 1
           extracted="$(mktemp -d "$RUNNER_TEMP/launcher-appimage.XXXXXX")"
           image="$PWD/${images[0]}"
-          (cd "$extracted" && "$image" --appimage-extract AppRun '*.desktop')
+          (cd "$extracted" && "$image" --appimage-extract AppRun && "$image" --appimage-extract '*.desktop')
           test -x "$extracted/squashfs-root/AppRun"
           grep -F 'exec "$APPDIR/arma-reforger-launcher" "$@"' "$extracted/squashfs-root/AppRun"
           if grep -r -e '--no-sandbox' -e 'NO_SANDBOX' "$extracted/squashfs-root"; then

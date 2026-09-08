@@ -12,6 +12,22 @@ const {
 
 const ARTIFACT_NAME = 'Arma-Reforger-Launcher-0.3.27-x64-Setup.exe';
 
+async function withReferencedDeadline(operation) {
+  // Mock fetches create no sockets. Keep the test alive for AbortSignal's
+  // unref'ed timeout, and fail deterministically if the operation never ends.
+  let watchdog;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise((_resolve, reject) => {
+        watchdog = setTimeout(() => reject(new Error('Mock fetch test did not settle before its deadline')), 1000);
+      })
+    ]);
+  } finally {
+    clearTimeout(watchdog);
+  }
+}
+
 function headers(values = {}) {
   const normalized = new Map(Object.entries(values).map(([key, value]) => [key.toLowerCase(), String(value)]));
   return { get: (name) => normalized.get(String(name).toLowerCase()) ?? null };
@@ -150,7 +166,7 @@ test('rejects invalid installer names before calling fetch', async () => {
 test('aborts a fetch implementation that never resolves', async () => {
   const fetchImpl = () => new Promise(() => {});
   await assert.rejects(
-    fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl, timeoutMs: 10 }),
+    withReferencedDeadline(fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl, timeoutMs: 10 })),
     /update-artifact-fetch-timeout/
   );
 });
@@ -166,18 +182,11 @@ test('a stalled body cannot hold the fetch timeout hostage through iterator clea
       };
     }
   };
-  let watchdog;
-  try {
-    const result = await Promise.race([
-      fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl: async () => response, timeoutMs: 10 })
-        .then(() => 'resolved', (error) => error.code),
-      new Promise((resolve) => { watchdog = setTimeout(() => resolve('hung'), 250); })
-    ]);
-    assert.equal(result, 'update-artifact-fetch-timeout');
-    assert.equal(cleanupCalled, true);
-  } finally {
-    clearTimeout(watchdog);
-  }
+  await assert.rejects(
+    withReferencedDeadline(fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl: async () => response, timeoutMs: 10 })),
+    /update-artifact-fetch-timeout/
+  );
+  assert.equal(cleanupCalled, true);
 });
 
 test('cancels a stalled reader without waiting for its cancel operation or masking timeout with releaseLock', async () => {
@@ -193,11 +202,10 @@ test('cancels a stalled reader without waiting for its cancel operation or maski
       };
     }
   };
-  const watchdog = setTimeout(() => {}, 500);
-  try {
-    await assert.rejects(fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl: async () => response, timeoutMs: 10 }),
-      /update-artifact-fetch-timeout/);
-    assert.equal(cancelled, true);
-    assert.equal(released, true);
-  } finally { clearTimeout(watchdog); }
+  await assert.rejects(
+    withReferencedDeadline(fetchUpdateArtifactEnvelope({ artifactName: ARTIFACT_NAME, fetchImpl: async () => response, timeoutMs: 10 })),
+    /update-artifact-fetch-timeout/
+  );
+  assert.equal(cancelled, true);
+  assert.equal(released, true);
 });
