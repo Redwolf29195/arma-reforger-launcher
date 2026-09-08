@@ -2,7 +2,7 @@ name: Linux builds
 
 on:
   push:
-    branches: [linux-support]
+    branches: [main, linux-support]
   pull_request:
   workflow_dispatch:
 
@@ -68,6 +68,7 @@ jobs:
           xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/uiSmoke.js "$PWD/artifacts/linux-ui.png"
           xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/serverUiSmoke.js "$PWD/artifacts/linux-servers.png"
       - name: Build separate Linux packages without a signing key
+        id: build-linux
         run: pnpm run dist:linux
       - name: Check the packaged AppImage launcher
         run: |
@@ -96,11 +97,14 @@ jobs:
             node scripts/linux-package-smoke.js --extracted-appimage \
             "$APPIMAGE_SMOKE_ROOT/AppRun" artifacts/linux-appimage.png
       - name: Install the Debian package
+        id: install-deb
+        if: ${{ !cancelled() && steps.build-linux.conclusion == 'success' }}
         run: |
           mapfile -t packages < <(find dist-local -maxdepth 2 -type f -name '*-linux-x64.deb')
           test "${#packages[@]}" -eq 1
           sudo apt-get install -y "./${packages[0]}"
       - name: Run the installed package as an ordinary user
+        if: ${{ !cancelled() && steps.install-deb.conclusion == 'success' }}
         run: |
           test "$(id -u)" -ne 0
           xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- node scripts/linux-package-smoke.js \

@@ -1,6 +1,6 @@
 # Build and release process
 
-The GPL source is maintained in [`Redwolf29195/arma-reforger-launcher`](https://github.com/Redwolf29195/arma-reforger-launcher). Official Windows update artifacts remain in [`Redwolf29195/arma-reforger-launcher-updates`](https://github.com/Redwolf29195/arma-reforger-launcher-updates).
+The GPL source is maintained in [`Redwolf29195/arma-reforger-launcher`](https://github.com/Redwolf29195/arma-reforger-launcher). Official Windows and Linux downloads remain in [`Redwolf29195/arma-reforger-launcher-updates`](https://github.com/Redwolf29195/arma-reforger-launcher-updates).
 
 Открытые исходники и официальные файлы обновлений находятся в разных репозиториях, указанных выше. Обычная сборка не требует ключа владельца. Закрытый ключ используется только владельцем для подписи файлов официального канала обновлений.
 
@@ -22,7 +22,7 @@ pnpm run dist:win
 
 `scripts/prepare-build.js` copies readable application source, license notices and the included Workshop bridge into `.build/app`. It does not obfuscate code or require a private release key. Output directories are configured in `package.json`.
 
-Additional targets are `pnpm run dist:linux` and `pnpm run dist:mac`. Build and test on the target OS. Game compatibility is a separate requirement; packaging the launcher does not supply the game or its runtime.
+On Linux, `pnpm run dist:linux` builds separate x64 DEB and AppImage packages. The Linux workflow validates Ubuntu 22.04 and 24.04, including source tests, Electron UI checks, the installed DEB and the extracted AppImage payload with sandboxing enabled. It does not test a mounted AppImage or start Arma Reforger; Steam/Proton and real game compatibility require separate validation. The macOS target remains unvalidated.
 
 For UI changes, also run the relevant Electron smoke checks with isolated fixtures:
 
@@ -50,6 +50,22 @@ pnpm run release:audit:public-unsigned
 ```
 
 Set `algzUpdatePolicy` in `package.json` before building: `optional` with zero grace, `semi-forced` with a grace period of 60–3600 seconds, or `forced` with zero configured grace. Do not manually edit signed update-policy values in `latest.yml`.
+
+## Combined Windows and Linux release
+
+Build Windows with the pipeline above. Obtain the Linux artifacts from the successful Ubuntu 22.04 workflow for the same application source; use Ubuntu 24.04 as an additional compatibility check. Put exactly the versioned `linux-x64.deb` and `linux-x64.AppImage` files in a separate directory, then run:
+
+```sh
+node scripts/release-public-unsigned.js --reuse-build --linux-directory /path/to/linux-packages
+```
+
+This verifies the existing five Windows files before adding the two Linux packages. The final release has seven assets. Keep `latest.yml`, the blockmap and ALGZ signature associated with the Windows Setup; Linux uses manual updates and must never run the Windows updater. After publication, check the complete release with:
+
+```sh
+node scripts/verify-public-release.js --with-linux
+```
+
+Для общего выпуска сначала соберите и проверьте Windows. Добавляйте DEB и AppImage из успешной проверки Linux для того же исходного кода. Команда выше сохраняет проверенные Windows-файлы и добавляет два Linux-пакета; существующие версии и данные пользователей не заменяются.
 
 ## Publish a version
 

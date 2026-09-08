@@ -12,6 +12,12 @@ const { spawn, execFileSync } = require('node:child_process');
 
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
+function diagnosticOutput(output) {
+  return output
+    .replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[redacted]@')
+    .replace(/((?:authorization|password|token|secret|api[_-]?key)\s*[:=]\s*)[^\s,;]+/gi, '$1[redacted]');
+}
+
 async function processTree(parentPid) {
   const processes = [];
   for (const directory of await fs.readdir('/proc')) {
@@ -81,9 +87,10 @@ async function main() {
   const exited = new Promise(resolve => { child.once('exit', resolve); child.once('error', resolve); });
   let spawnError;
   child.once('error', error => { spawnError = error; });
+  let windowId;
+  let tree = [];
   try {
     const deadline = Date.now() + 45_000;
-    let windowId;
     let renderers = [];
     while (Date.now() < deadline) {
       if (spawnError) throw spawnError;
@@ -92,7 +99,7 @@ async function main() {
       try {
         windowId = execFileSync('xdotool', ['search', '--onlyvisible', '--pid', String(child.pid)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n')[0];
       } catch { windowId = undefined; }
-      const tree = await processTree(child.pid);
+      tree = await processTree(child.pid);
       assert(!tree.some(process => process.arguments.includes('--no-sandbox')), 'A packaged process disabled the sandbox.');
       renderers = tree.filter(process => process.arguments.includes('--type=renderer'));
       if (windowId && renderers.length) break;
@@ -122,6 +129,31 @@ async function main() {
     };
     await fs.writeFile(screenshot.replace(/\.png$/i, '') + '.json', `${JSON.stringify(report, null, 2)}\n`);
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  } catch (error) {
+    const diagnostics = {
+      distribution: extractedAppImage ? 'extracted-appimage' : 'installed-deb',
+      exitCode: child.exitCode,
+      signalCode: child.signalCode,
+      output: diagnosticOutput(output),
+      processes: tree.map(item => ({
+        pid: item.pid,
+        parent: item.parent,
+        name: item.status.match(/^Name:\s+(.+)$/m)?.[1],
+        type: item.arguments.find(argument => argument.startsWith('--type=')) || 'main',
+        seccomp: item.status.match(/^Seccomp:\s+(\d+)$/m)?.[1],
+        noNewPrivileges: item.status.match(/^NoNewPrivs:\s+(\d+)$/m)?.[1]
+      }))
+    };
+    if (windowId) {
+      try {
+        diagnostics.windowTitle = execFileSync('xdotool', ['getwindowname', windowId], { encoding: 'utf8' }).trim();
+        execFileSync('import', ['-window', windowId, screenshot]);
+        diagnostics.screenshot = screenshot;
+      } catch (captureError) { diagnostics.captureError = captureError.message; }
+    }
+    await fs.writeFile(screenshot.replace(/\.png$/i, '') + '.failure.json', `${JSON.stringify(diagnostics, null, 2)}\n`);
+    process.stderr.write(`${JSON.stringify(diagnostics, null, 2)}\n`);
+    throw error;
   } finally {
     if (child.pid) {
       try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
