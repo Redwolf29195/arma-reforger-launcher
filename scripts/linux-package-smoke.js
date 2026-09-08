@@ -18,6 +18,15 @@ function diagnosticOutput(output) {
     .replace(/((?:authorization|password|token|secret|api[_-]?key)\s*[:=]\s*)[^\s,;]+/gi, '$1[redacted]');
 }
 
+function processCommandFlags(command) {
+  // Chromium's SetProcessTitleFromCommandLine flattens Linux argv with spaces.
+  // Match complete switches in both that title and ordinary NUL-separated argv.
+  return {
+    type: command.match(/(?:^|[\0\s])--type=([a-z-]+)(?=[\0\s]|$)/)?.[1] || 'main',
+    noSandbox: /(?:^|[\0\s])--no-sandbox(?=[=\0\s]|$)/.test(command)
+  };
+}
+
 async function processTree(parentPid) {
   const processes = [];
   for (const directory of await fs.readdir('/proc')) {
@@ -27,7 +36,7 @@ async function processTree(parentPid) {
         fs.readFile(`/proc/${directory}/status`, 'utf8'),
         fs.readFile(`/proc/${directory}/cmdline`, 'utf8')
       ]);
-      processes.push({ pid: Number(directory), parent: Number(status.match(/^PPid:\s+(\d+)/m)?.[1]), status, arguments: command.split('\0').filter(Boolean) });
+      processes.push({ pid: Number(directory), parent: Number(status.match(/^PPid:\s+(\d+)/m)?.[1]), status, ...processCommandFlags(command) });
     } catch (error) { if (!['ENOENT', 'EACCES', 'ESRCH'].includes(error.code)) throw error; }
   }
   const selected = new Set([parentPid]);
@@ -100,8 +109,8 @@ async function main() {
         windowId = execFileSync('xdotool', ['search', '--onlyvisible', '--pid', String(child.pid)], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim().split('\n')[0];
       } catch { windowId = undefined; }
       tree = await processTree(child.pid);
-      assert(!tree.some(process => process.arguments.includes('--no-sandbox')), 'A packaged process disabled the sandbox.');
-      renderers = tree.filter(process => process.arguments.includes('--type=renderer'));
+      assert(!tree.some(process => process.noSandbox), 'A packaged process disabled the sandbox.');
+      renderers = tree.filter(process => process.type === 'renderer');
       if (windowId && renderers.length) break;
       await delay(250);
     }
@@ -139,7 +148,7 @@ async function main() {
         pid: item.pid,
         parent: item.parent,
         name: item.status.match(/^Name:\s+(.+)$/m)?.[1],
-        type: item.arguments.find(argument => argument.startsWith('--type=')) || 'main',
+        type: item.type,
         seccomp: item.status.match(/^Seccomp:\s+(\d+)$/m)?.[1],
         noNewPrivileges: item.status.match(/^NoNewPrivs:\s+(\d+)$/m)?.[1]
       }))
@@ -168,4 +177,7 @@ async function main() {
   }
 }
 
-main().catch(error => { process.stderr.write(`${error.stack || error}\n`); process.exitCode = 1; });
+module.exports = { processCommandFlags };
+if (require.main === module) {
+  main().catch(error => { process.stderr.write(`${error.stack || error}\n`); process.exitCode = 1; });
+}
