@@ -7,6 +7,7 @@ const {
   isConfirmedApiRateLimit,
   listTagArchivePaths,
   parseExpandedAssetsHtml,
+  parsePublicVerifyArguments,
   parseReleaseHtml
 } = require('../scripts/verify-public-release');
 
@@ -49,6 +50,29 @@ test('requires exactly five tag-scoped assets and one digest per asset', () => {
   const parsed = parseExpandedAssetsHtml(html, tag);
   assert.deepEqual([...parsed.keys()].sort(), [...names].sort());
   assert.throws(() => parseExpandedAssetsHtml(html.replace(/<a\b[^>]*><\/a>/, ''), tag), /exactly the five/);
+});
+
+test('Linux public verification is explicit and accepts no unknown or duplicate options', () => {
+  assert.deepEqual(parsePublicVerifyArguments([]), { withLinux: false });
+  assert.deepEqual(parsePublicVerifyArguments(['--with-linux']), { withLinux: true });
+  assert.throws(() => parsePublicVerifyArguments(['--with-linux', '--with-linux']), /Only --with-linux/);
+  assert.throws(() => parsePublicVerifyArguments(['--anything']), /Only --with-linux/);
+});
+
+test('with-linux requires seven exact tag-scoped names and one digest for each Linux package', () => {
+  const linuxNames = [`.AppImage`, `.deb`].map(extension => `Arma-Reforger-Launcher-${version}-linux-x64${extension}`);
+  const allNames = [...names, ...linuxNames];
+  const digest = 'b'.repeat(64);
+  const html = allNames.map(name => `<a href="/${repository}/releases/download/${tag}/${encodeURIComponent(name)}"></a>
+    <clipboard-copy aria-label="Copy to clipboard digest for ${name}" value="sha256:${digest}"></clipboard-copy>`).join('\n');
+  assert.deepEqual([...parseExpandedAssetsHtml(html, tag, { withLinux: true }).keys()].sort(), allNames.sort());
+  assert.throws(() => parseExpandedAssetsHtml(html, tag), /exactly the five/);
+  assert.throws(() => parseExpandedAssetsHtml(html.replace(linuxNames[0], 'unexpected.AppImage'), tag, { withLinux: true }), /exactly the seven/);
+  assert.throws(() => parseExpandedAssetsHtml(html.replace(`value="sha256:${digest}"`, 'value="invalid"'), tag, { withLinux: true }));
+  const withoutLinuxDigest = html.replace(new RegExp(`<clipboard-copy aria-label="Copy to clipboard digest for ${linuxNames[1].replaceAll('.', '\\.')}"[^>]*></clipboard-copy>`), '');
+  assert.throws(() => parseExpandedAssetsHtml(withoutLinuxDigest, tag, { withLinux: true }), /digests are missing/);
+  const extra = `${html}<a href="/${repository}/releases/download/${tag}/extra.zip"></a>`;
+  assert.throws(() => parseExpandedAssetsHtml(extra, tag, { withLinux: true }), /exactly the seven/);
 });
 
 function tarHeader(name, size, type) {

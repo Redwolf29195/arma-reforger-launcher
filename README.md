@@ -50,9 +50,31 @@ pnpm run dist:win
 Build preparation copies readable source and the Workshop bridge to `.build/app`. These commands require no obfuscation or private signing key.
 Подготовка сборки копирует читаемые исходники и мост Workshop в `.build/app`. Обфускация и закрытый ключ подписи для этих команд не нужны.
 
-`pnpm run dist:linux` and `pnpm run dist:mac` are additional packaging targets. Build and validate them on their target operating systems; macOS signing requires your own credentials. Packaging the launcher does not make the game compatible with an unsupported OS.
+`pnpm run dist:linux` builds separate x64 AppImage and Debian packages on Linux. The Ubuntu 22.04/24.04 [CI workflow](.github/workflows/linux.yml) runs the unit suite, renderer checks and a real installed-package smoke with the sandbox enabled. `pnpm run dist:mac` remains an additional, unvalidated packaging target.
 
-`pnpm run dist:linux` и `pnpm run dist:mac` — дополнительные цели упаковки. Собирайте и проверяйте их на целевой ОС; для подписи macOS нужны собственные данные разработчика. Упаковка лаунчера не обеспечивает совместимость самой игры с другой ОС.
+`pnpm run dist:linux` создаёт отдельные пакеты AppImage и DEB для Linux x64. [Проверки Ubuntu 22.04/24.04](.github/workflows/linux.yml) включают тесты, интерфейс и запуск установленного пакета с включённой песочницей. Цель `pnpm run dist:mac` остаётся дополнительной и не проверенной.
+
+## Ubuntu / Linux Mint
+
+Windows and Linux have separate downloads. For Ubuntu 22.04/24.04 and Mint 21/22, use the `.deb` package. Install Steam and Arma Reforger, select Proton in the game's Steam compatibility settings, and open the game once from Steam. Then open the launcher: it detects the installed Windows game in Steam libraries and reads its Proton profile. The launcher runs natively on Linux; Steam supplies Proton for the game.
+
+Для Windows и Linux выпускаются отдельные файлы. В Ubuntu 22.04/24.04 и Mint 21/22 используйте пакет `.deb`. Установите Steam и Arma Reforger, выберите Proton в настройках совместимости игры в Steam и один раз откройте игру через Steam. После этого запустите лаунчер: он найдёт игру в библиотеках Steam и её профиль Proton. Сам лаунчер работает в Linux напрямую, а игру запускает Steam через Proton.
+
+```sh
+sudo apt install ./Arma-Reforger-Launcher-0.3.44-linux-x64.deb
+```
+
+The portable alternative is `Arma-Reforger-Launcher-0.3.44-linux-x64.AppImage`; make it executable before opening it. AppImage needs FUSE 2 and a working Chromium sandbox. If Ubuntu/Mint blocks its sandbox, install the `.deb` instead; no system-wide sandbox weakening is needed. Linux updates are downloaded manually from the releases page; the Windows automatic updater remains separate.
+
+Переносной вариант — `Arma-Reforger-Launcher-0.3.44-linux-x64.AppImage`. Перед запуском разрешите выполнение файла. Для AppImage нужны FUSE 2 и доступная песочница Chromium. Если Ubuntu/Mint блокирует её, установите `.deb`. Обновления Linux скачиваются вручную со страницы релизов; автоматическое обновление Windows работает отдельно.
+
+Select ordinary Linux paths in the launcher's Settings; it translates managed paths for Proton. Advanced filesystem arguments entered manually must use Wine paths, for example `Z:\\home\\user\\GameProfile`. The initial supported setup uses native Steam; discovery includes Flatpak libraries, but Flatpak's filesystem permissions and SteamOS are not validated here.
+
+В настройках лаунчера выбирайте обычные Linux-пути — необходимые пути для Proton преобразуются автоматически. Пути в дополнительных аргументах, введённых вручную, должны иметь формат Wine, например `Z:\\home\\user\\GameProfile`. Основной вариант — обычный Steam. Поиск также видит библиотеки Flatpak, но его разрешения на папки и SteamOS здесь не проверены.
+
+CI does not own or start Arma Reforger. Automated validation covers the launcher, packages and simulated Steam/Proton lifecycle, including crash/exit handling. Actual gameplay, Workshop network downloads and multiplayer compatibility still require a game session on Linux. See [Valve's Proton documentation](https://github.com/ValveSoftware/Proton) for the compatibility layer.
+
+В тестовой среде Arma Reforger не запускается. Автоматические проверки охватывают лаунчер, установку и имитацию работы Steam/Proton, включая закрытие и сбой игры. Игровой процесс, сетевую загрузку Workshop и подключение к серверам необходимо дополнительно проверить с самой игрой на Linux.
 
 Official update releases authenticate downloaded artifacts. Maintainer instructions and source-publication requirements: [RELEASE-PROCESS.md](RELEASE-PROCESS.md).
 Официальные обновления проверяют подлинность загружаемых файлов. Порядок выпуска и публикации исходников: [RELEASE-PROCESS.md](RELEASE-PROCESS.md).

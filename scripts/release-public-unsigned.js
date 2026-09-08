@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { parseReleaseArguments, publishVerifiedReleaseDirectory, validateLinuxArtifacts } = require('./release-artifacts');
 
 const packageMetadata = require('../package.json');
 const { readBlockMap } = require('../src/main/fastUpdater');
@@ -22,7 +23,6 @@ const {
 const projectRoot = path.resolve(__dirname, '..');
 const buildRoot = path.join(projectRoot, 'dist-public-unsigned');
 const releaseRoot = path.join(projectRoot, 'dist-release');
-const reuseBuild = process.argv.slice(2).includes('--reuse-build');
 
 function fail(message) {
   throw new Error(message);
@@ -190,47 +190,8 @@ async function validateBuild(buildDirectory, version) {
   return { files, names, portableName, setupName, updatePolicy: verifiedPolicy };
 }
 
-async function publishCleanDirectory(validated, releaseDirectory, version) {
-  try {
-    const current = await fsp.readdir(releaseDirectory, { withFileTypes: true });
-    const currentNames = current.map((entry) => entry.name).sort((a, b) => a.localeCompare(b, 'en'));
-    const expectedNames = [...validated.names].sort((a, b) => a.localeCompare(b, 'en'));
-    if (current.some((entry) => !entry.isFile())
-      || currentNames.length !== expectedNames.length
-      || currentNames.some((name, index) => name !== expectedNames[index])) {
-      fail(`Existing release directory is not the exact five-file set for ${version}.`);
-    }
-    for (const name of expectedNames) {
-      const target = path.join(releaseDirectory, name);
-      await regularFile(target);
-      if (await sha256(target) !== validated.files.get(name).sha256) {
-        fail(`Existing release file differs from the verified build: ${name}`);
-      }
-    }
-    return 'verified-existing';
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-
-  const temporary = path.join(releaseRoot, `.${version}-${process.pid}-${crypto.randomBytes(6).toString('hex')}.tmp`);
-  const resolvedTemporary = path.resolve(temporary);
-  if (!resolvedTemporary.startsWith(`${path.resolve(releaseRoot)}${path.sep}`)) fail('Unsafe temporary release directory.');
-  await fsp.mkdir(temporary, { recursive: false });
-  try {
-    for (const name of validated.names) {
-      await fsp.copyFile(validated.files.get(name).path, path.join(temporary, name), fs.constants.COPYFILE_EXCL);
-    }
-    await fsp.rename(temporary, releaseDirectory);
-  } catch (error) {
-    await fsp.rm(temporary, { recursive: true, force: true });
-    throw error;
-  }
-  return 'created';
-}
-
 async function main() {
-  const unsupported = process.argv.slice(2).filter((argument) => argument !== '--reuse-build');
-  if (unsupported.length > 0) fail(`Unsupported argument: ${unsupported[0]}`);
+  const { reuseBuild, linuxDirectory } = parseReleaseArguments(process.argv.slice(2));
   if (process.platform !== 'win32') fail('The Windows release pipeline must run on Windows.');
 
   const version = assertVersion(packageMetadata.version);
@@ -274,8 +235,13 @@ async function main() {
     ]);
 
   const validated = await validateBuild(buildDirectory, version);
+  if (linuxDirectory) {
+    const linux = await validateLinuxArtifacts(linuxDirectory, version);
+    validated.names.push(...linux.names);
+    for (const [name, file] of linux.files) validated.files.set(name, file);
+  }
   await fsp.mkdir(releaseRoot, { recursive: true });
-  const result = await publishCleanDirectory(validated, releaseDirectory, version);
+  const result = await publishVerifiedReleaseDirectory(validated, releaseDirectory, version);
   const report = [...validated.files.values()]
     .map(({ name, size, sha256: digest }) => ({ name, size, sha256: digest }));
   process.stdout.write(`${JSON.stringify({
@@ -287,7 +253,9 @@ async function main() {
   }, null, 2)}\n`);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error?.stack || error}\n`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error?.stack || error}\n`);
+    process.exitCode = 1;
+  });
+}

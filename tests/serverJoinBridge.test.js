@@ -24,6 +24,22 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function withReferencedDeadline(operation, timeoutMs = 2000) {
+  // Monitor polling intentionally uses unref'ed timers. A test awaiting only
+  // a callback needs its own bounded handle to keep Node's event loop alive.
+  let watchdog;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise((_resolve, reject) => {
+        watchdog = setTimeout(() => reject(new Error('Expected server-join callback was not received')), timeoutMs);
+      })
+    ]);
+  } finally {
+    clearTimeout(watchdog);
+  }
+}
+
 async function waitFor(predicate, timeoutMs = 1000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -234,7 +250,7 @@ test('monitor ignores stale and foreign statuses, reports changes, and stops on 
   await fs.writeFile(statusPath, `${TOKEN}|opening-browser|Opening server browser\n`, 'utf8');
   assert.equal(await waitFor(() => statuses.length === 2), true);
   await fs.writeFile(statusPath, `${TOKEN}|joining|Join request handed off\n`, 'utf8');
-  const finalStatus = await terminal;
+  const finalStatus = await withReferencedDeadline(terminal);
   assert.equal(finalStatus.state, 'joining');
   assert.deepEqual(statuses.map((status) => status.state), ['waiting', 'opening-browser', 'joining']);
   assert.equal(terminals.length, 1);
@@ -268,7 +284,7 @@ test('an explicit bridge error is terminal but does not become a fabricated game
     });
   });
   await fs.writeFile(statusPath, `${TOKEN}|error|Native browser unavailable\n`, 'utf8');
-  const result = await terminal;
+  const result = await withReferencedDeadline(terminal);
 
   assert.equal(result.state, 'error');
   assert.equal(result.message, 'Native browser unavailable');

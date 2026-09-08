@@ -7,15 +7,18 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const zlib = require('node:zlib');
 const { version } = require('../package.json');
+const { artifactNames, assertWindowsUpdateTarget, regularDirectory, regularFile, validateLinuxHeader } = require('./release-artifacts');
 
 const repository = 'Redwolf29195/arma-reforger-launcher-updates';
 const api = `https://api.github.com/repos/${repository}`;
 const releaseRoot = path.resolve(__dirname, '..', 'dist-release', version);
 const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
-const expectedNames = [
-  `Arma-Reforger-Launcher-${version}-x64-Portable.exe`,
-  setup, `${setup}.algz.json`, `${setup}.blockmap`, 'latest.yml'
-].sort();
+
+function parsePublicVerifyArguments(argumentsList) {
+  assert.ok(argumentsList.length === 0 || (argumentsList.length === 1 && argumentsList[0] === '--with-linux'),
+    'Only --with-linux is supported by public release verification.');
+  return { withLinux: argumentsList.length === 1 };
+}
 
 class GitHubApiRateLimitError extends Error {
   constructor(url, response) {
@@ -53,6 +56,7 @@ async function request(url, options = {}) {
 }
 
 async function hashFile(filePath) {
+  await regularFile(filePath);
   const digest = crypto.createHash('sha256');
   let size = 0;
   for await (const chunk of fsSync.createReadStream(filePath)) {
@@ -62,12 +66,17 @@ async function hashFile(filePath) {
   return { size, sha256: digest.digest('hex') };
 }
 
-async function loadLocalFiles() {
-  assert.deepEqual((await fs.readdir(releaseRoot)).sort(), expectedNames);
+async function loadLocalFiles({ withLinux = false, directory = releaseRoot } = {}) {
+  const expectedNames = artifactNames(version, { withLinux });
+  await regularDirectory(directory);
+  assert.deepEqual((await fs.readdir(directory)).sort(), expectedNames, 'Local release directory has unexpected artifacts.');
   const files = [];
   for (const name of expectedNames) {
-    files.push({ name, ...await hashFile(path.join(releaseRoot, name)) });
+    const filePath = path.join(directory, name);
+    if (/\.(?:AppImage|deb)$/.test(name)) await validateLinuxHeader(filePath, name);
+    files.push({ name, ...await hashFile(filePath) });
   }
+  assertWindowsUpdateTarget(await fs.readFile(path.join(directory, 'latest.yml'), 'utf8'), version);
   return files;
 }
 
@@ -93,7 +102,8 @@ function parseReleaseHtml(html, tag) {
   return { expandedUrl: expectedExpandedUrl, publishedAt: published[1] };
 }
 
-function parseExpandedAssetsHtml(html, tag) {
+function parseExpandedAssetsHtml(html, tag, { withLinux = false } = {}) {
+  const expectedNames = artifactNames(version, { withLinux });
   const prefix = `/${repository}/releases/download/${tag}/`;
   const names = [];
   for (const match of html.matchAll(/<a\b[^>]*>/g)) {
@@ -103,7 +113,7 @@ function parseExpandedAssetsHtml(html, tag) {
     assert.ok(encodedName && !encodedName.includes('/'), 'Release asset link has an invalid filename');
     names.push(decodeURIComponent(encodedName));
   }
-  assert.deepEqual(names.sort(), expectedNames, 'Public release does not contain exactly the five expected assets');
+  assert.deepEqual(names.sort(), expectedNames, `Public release does not contain exactly the ${withLinux ? 'seven' : 'five'} expected assets`);
 
   const digests = new Map();
   for (const match of html.matchAll(/<clipboard-copy\b[^>]*>/g)) {
@@ -198,7 +208,8 @@ async function downloadAndHash(url) {
   return { size, sha256: digest.digest('hex') };
 }
 
-async function verifyWithApi(files) {
+async function verifyWithApi(files, { withLinux = false } = {}) {
+  const expectedNames = artifactNames(version, { withLinux });
   const release = await (await request(`${api}/releases/latest`)).json();
   assert.equal(release.tag_name, `v${version}`, 'Latest release is not the newly built version');
   assert.equal(release.draft, false);
@@ -210,7 +221,7 @@ async function verifyWithApi(files) {
     assert.equal(asset.state, 'uploaded', `${file.name} is not fully uploaded`);
     assert.equal(asset.size, file.size, `${file.name} size differs`);
     assert.equal(asset.digest, `sha256:${file.sha256}`, `${file.name} GitHub digest differs`);
-    if (file.name.endsWith('.exe')) continue;
+    if (/\.(?:exe|AppImage|deb)$/.test(file.name)) continue;
     const local = await fs.readFile(path.join(releaseRoot, file.name));
     for (const ref of [`download/v${version}`, 'latest/download']) {
       const response = await request(`https://github.com/${repository}/releases/${ref}/${encodeURIComponent(file.name)}`);
@@ -244,7 +255,7 @@ async function verifyWithApi(files) {
   };
 }
 
-async function verifyWithoutApi(files, rateLimitError) {
+async function verifyWithoutApi(files, rateLimitError, { withLinux = false } = {}) {
   const tag = `v${version}`;
   const tagUrl = `https://github.com/${repository}/releases/tag/${tag}`;
   const latestResponse = await request(`https://github.com/${repository}/releases/latest`);
@@ -253,7 +264,7 @@ async function verifyWithoutApi(files, rateLimitError) {
   const tagResponse = await request(tagUrl);
   assert.equal(tagResponse.url, tagUrl, 'Public tag URL redirected unexpectedly');
   parseReleaseHtml(await tagResponse.text(), tag);
-  const digests = parseExpandedAssetsHtml(await (await request(expandedUrl)).text(), tag);
+  const digests = parseExpandedAssetsHtml(await (await request(expandedUrl)).text(), tag, { withLinux });
   for (const file of files) assert.equal(digests.get(file.name), file.sha256, `${file.name} HTML digest differs`);
 
   for (const ref of [`download/${tag}`, 'latest/download']) {
@@ -281,15 +292,16 @@ async function verifyWithoutApi(files, rateLimitError) {
 }
 
 async function main() {
+  const options = parsePublicVerifyArguments(process.argv.slice(2));
   assert.match(version, /^\d+\.\d+\.\d+$/);
-  const files = await loadLocalFiles();
+  const files = await loadLocalFiles(options);
   let release;
   try {
-    release = await verifyWithApi(files);
+    release = await verifyWithApi(files, options);
   } catch (error) {
     if (!(error instanceof GitHubApiRateLimitError)) throw error;
     process.stderr.write(`${error.message}; using strict public HTML/download/archive fallback\n`);
-    release = await verifyWithoutApi(files, error);
+    release = await verifyWithoutApi(files, error, options);
   }
   process.stdout.write(`${JSON.stringify({ version, verified: true, ...release, files }, null, 2)}\n`);
 }
@@ -304,6 +316,8 @@ if (require.main === module) {
 module.exports = {
   isConfirmedApiRateLimit,
   listTagArchivePaths,
+  loadLocalFiles,
   parseExpandedAssetsHtml,
+  parsePublicVerifyArguments,
   parseReleaseHtml
 };
