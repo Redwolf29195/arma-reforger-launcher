@@ -712,6 +712,7 @@ function createWindow() {
     backgroundColor: '#17191b',
     show: false,
     title: 'Arma Reforger Launcher',
+    icon: path.join(__dirname, '..', 'renderer', 'assets', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

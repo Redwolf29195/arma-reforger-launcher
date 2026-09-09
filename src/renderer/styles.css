@@ -107,12 +107,8 @@ img {
 .titlebar-mark {
   width: 22px;
   height: 22px;
-  display: grid;
-  place-items: center;
-  background: var(--accent);
-  color: #161616;
-  font-weight: 900;
-  font-size: 10px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .titlebar-state {
@@ -262,6 +258,15 @@ img {
   position: relative;
 }
 
+.brand-panel .brand-logo {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
 .brand-kicker {
   color: #d7d9d8;
   font-size: 10px;
@@ -380,18 +385,12 @@ img {
 
 .sidebar-build-mark,
 .about-brand-mark {
-  display: grid;
-  place-items: center;
-  background: var(--accent);
-  color: #171511;
-  font-family: "Arial Narrow", "Segoe UI", sans-serif;
-  font-weight: 900;
+  object-fit: contain;
 }
 
 .sidebar-build-mark {
   width: 27px;
   height: 27px;
-  font-size: 13px;
 }
 
 .sidebar-build-copy {
@@ -3020,7 +3019,6 @@ dialog.license-dialog[open] {
 .about-brand-mark {
   width: 52px;
   height: 52px;
-  font-size: 23px;
 }
 
 .about-identity-banner strong,
