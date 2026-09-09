@@ -1,6 +1,6 @@
 # Arma Reforger Launcher
 
-<img src="src/renderer/assets/app-icon.png" width="128" height="128" alt="LAR Launcher logo">
+<img src="src/renderer/assets/app-icon.png" width="128" height="128" alt="Arma Reforger Launcher logo">
 
 A desktop launcher for Arma Reforger presets, Workshop downloads and server connections.
 Лаунчер для пресетов Arma Reforger, загрузки модов Workshop и подключения к серверам.
@@ -63,12 +63,12 @@ Windows and Linux have separate downloads. For Ubuntu 22.04/24.04 and Mint 21/22
 Для Windows и Linux выпускаются отдельные файлы. В Ubuntu 22.04/24.04 и Mint 21/22 используйте пакет `.deb`. Установите Steam и Arma Reforger, выберите Proton в настройках совместимости игры в Steam и один раз откройте игру через Steam. После этого запустите лаунчер: он найдёт игру в библиотеках Steam и её профиль Proton. Сам лаунчер работает в Linux напрямую, а игру запускает Steam через Proton.
 
 ```sh
-sudo apt install ./Arma-Reforger-Launcher-0.3.46-linux-x64.deb
+sudo apt install ./Arma-Reforger-Launcher-0.3.47-linux-x64.deb
 ```
 
-The portable alternative is `Arma-Reforger-Launcher-0.3.46-linux-x64.AppImage`; make it executable before opening it. AppImage needs FUSE 2 and a working Chromium sandbox. If Ubuntu/Mint blocks its sandbox, install the `.deb` instead; no system-wide sandbox weakening is needed. Linux updates are downloaded manually from the releases page; the Windows automatic updater remains separate.
+The portable alternative is `Arma-Reforger-Launcher-0.3.47-linux-x64.AppImage`; make it executable before opening it. AppImage needs FUSE 2 and a working Chromium sandbox. If Ubuntu/Mint blocks its sandbox, install the `.deb` instead; no system-wide sandbox weakening is needed. Linux updates are downloaded manually from the releases page; the Windows automatic updater remains separate.
 
-Переносной вариант — `Arma-Reforger-Launcher-0.3.46-linux-x64.AppImage`. Перед запуском разрешите выполнение файла. Для AppImage нужны FUSE 2 и доступная песочница Chromium. Если Ubuntu/Mint блокирует её, установите `.deb`. Обновления Linux скачиваются вручную со страницы релизов; автоматическое обновление Windows работает отдельно.
+Переносной вариант — `Arma-Reforger-Launcher-0.3.47-linux-x64.AppImage`. Перед запуском разрешите выполнение файла. Для AppImage нужны FUSE 2 и доступная песочница Chromium. Если Ubuntu/Mint блокирует её, установите `.deb`. Обновления Linux скачиваются вручную со страницы релизов; автоматическое обновление Windows работает отдельно.
 
 Select ordinary Linux paths in the launcher's Settings; it translates managed paths for Proton. Advanced filesystem arguments entered manually must use Wine paths, for example `Z:\home\user\GameProfile`. The initial supported setup uses native Steam; discovery includes Flatpak libraries, but Flatpak's filesystem permissions and SteamOS are not validated here.
 

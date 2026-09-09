@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://ar-gcp-cdn.bistudio.com; style-src 'self'; script-src 'self'; connect-src 'none'">
   <title>Arma Reforger Launcher</title>
-  <link rel="icon" type="image/png" href="assets/app-icon.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="titlebar">
     <div class="titlebar-drag">
-      <img class="titlebar-mark" src="assets/app-icon.png" alt="" aria-hidden="true">
+      <span class="titlebar-mark">AR</span>
       <span>Arma Reforger Launcher</span>
       <span class="titlebar-state"><i></i><span id="titlebarStatus">Ready</span></span>
       <button class="titlebar-update" id="titlebarUpdate" type="button" hidden>
@@ -32,7 +31,6 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand-panel">
-        <img class="brand-logo" src="assets/app-icon.png" alt="" aria-hidden="true">
         <div class="brand-kicker">COMMUNITY TOOLS</div>
         <div class="brand-title">ARMA<br>REFORGER</div>
         <div class="brand-subtitle">LAUNCHER</div>
@@ -68,7 +66,7 @@
           <div><strong>Arma Reforger</strong><small>Checking...</small></div>
         </div>
         <button class="sidebar-build-button" id="openAboutSidebar" type="button" aria-label="About" title="About">
-          <img class="sidebar-build-mark" src="assets/app-icon.png" alt="" aria-hidden="true">
+          <span class="sidebar-build-mark">A</span>
           <span class="sidebar-build-copy"><strong id="appVersion">v0.1.0</strong><small id="sidebarBuildStatus">Development build</small></span>
           <span class="sidebar-build-state" id="sidebarBuildState" aria-hidden="true"></span>
         </button>
@@ -452,7 +450,7 @@
     </div>
     <div class="about-dialog-body">
       <section class="about-identity-banner" id="aboutIdentityBanner" data-status="development">
-        <img class="about-brand-mark" src="assets/app-icon.png" alt="" aria-hidden="true">
+        <span class="about-brand-mark" aria-hidden="true">A</span>
         <div><strong id="aboutProductName">ALGZ Launcher for Arma Reforger</strong><span id="aboutOverallStatus">Development build</span><small id="aboutStatusHelp">Running from editable source code under GPL-3.0-only.</small></div>
       </section>
 

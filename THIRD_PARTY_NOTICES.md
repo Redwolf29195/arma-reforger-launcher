@@ -158,7 +158,7 @@ Source: [Google Fonts Oswald](https://github.com/google/fonts/tree/main/ofl/oswa
 
 `src/renderer/assets/icons/discord.svg` depicts the Discord logo as a link to the community's Discord service. Discord and its logo are the property of Discord Inc.; this mark is not claimed as original ALGZ artwork or relicensed under GPL. See [Discord brand guidelines](https://discord.com/branding).
 
-`src/renderer/assets/app-icon.png` is the orange LAR monogram supplied by the project owner in September 2026, prepared for application-icon use with AI-assisted cleanup. `src/renderer/assets/launcher-cover.png` is owner-provided artwork retained from the existing launcher. This describes their project provenance and does not claim ownership of any third-party marks or material depicted in them. The GPL grant covers only rights held by the project authors.
+`src/renderer/assets/app-icon.png` and `src/renderer/assets/launcher-cover.png` are owner-provided artwork retained from the existing launcher. The application icon uses the existing 512px export of the original gold AR logo. This describes their project provenance and does not claim ownership of any third-party marks or material depicted in them. The GPL grant covers only rights held by the project authors.
 
 ## Build tools
 

@@ -1,6 +1,6 @@
 {
   "name": "arma-reforger-launcher",
-  "version": "0.3.46",
+  "version": "0.3.47",
   "description": "Cross-platform preset and mod launcher for Arma Reforger",
   "main": "src/main/main.js",
   "private": true,
