@@ -103,6 +103,13 @@ jobs:
           mapfile -t packages < <(find dist-local -maxdepth 2 -type f -name '*-linux-x64.deb')
           test "${#packages[@]}" -eq 1
           sudo apt-get install -y "./${packages[0]}"
+          # Desktop themes index standard icon sizes; a custom-size directory
+          # can install successfully while leaving the application icon missing.
+          icon=/usr/share/icons/hicolor/512x512/apps/arma-reforger-launcher.png
+          test -f "$icon"
+          cmp src/renderer/assets/app-icon.png "$icon"
+          grep -F '[512x512/apps]' /usr/share/icons/hicolor/index.theme
+          grep -Fx 'Icon=arma-reforger-launcher' /usr/share/applications/arma-reforger-launcher.desktop
       - name: Run the installed package as an ordinary user
         if: ${{ !cancelled() && steps.install-deb.conclusion == 'success' }}
         run: |
