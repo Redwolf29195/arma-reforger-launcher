@@ -1,4 +1,5 @@
 'use strict';
+const { releaseArtifactPrefix } = require('../scripts/release-artifact-name');
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs/promises');
@@ -178,7 +179,7 @@ test('unexpected release assets prevent augmentation and a failed second copy ro
 });
 
 test('latest.yml remains a single Windows NSIS installer update even in a seven-file release', () => {
-  const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
+  const setup = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
   const yaml = `version: ${version}\nfiles:\n  - url: ${setup}\npath: ${setup}\n`;
   assert.doesNotThrow(() => assertWindowsUpdateTarget(yaml, version));
   assert.throws(() => assertWindowsUpdateTarget(yaml.replaceAll(setup, linuxArtifactNames(version)[0]), version), /Windows Setup/);

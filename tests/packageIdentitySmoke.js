@@ -1,4 +1,6 @@
 const path = require('node:path');
+const fs = require('node:fs/promises');
+const assert = require('node:assert/strict');
 const { app } = require('electron');
 
 const { readBuildIdentity } = require('../src/core/buildIdentity');
@@ -12,6 +14,9 @@ async function main() {
     throw new Error(`Unsupported expected release tier: ${expectedTier}`);
   }
   await app.whenReady();
+  const runtimePackage = JSON.parse(await fs.readFile(path.join(appPath, 'package.json'), 'utf8'));
+  assert.equal(runtimePackage.name, 'arma-reforger-launcher');
+  assert.equal(runtimePackage.productName, undefined, 'Packaged rename must preserve the existing profile directory');
   const identity = await readBuildIdentity({
     appPath: path.resolve(appPath),
     resourcesPath: path.resolve(resourcesPath),

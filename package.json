@@ -1,7 +1,7 @@
 {
   "name": "arma-reforger-launcher",
-  "version": "0.3.47",
-  "description": "Cross-platform preset and mod launcher for Arma Reforger",
+  "version": "0.3.48",
+  "description": "LAR Launcher: presets, mods and servers for Arma Reforger",
   "main": "src/main/main.js",
   "private": true,
   "author": "ALGZ / ExtaZzZ",
@@ -35,7 +35,7 @@
   },
   "build": {
     "appId": "app.armareforger.launcher",
-    "productName": "Arma Reforger Launcher",
+    "productName": "LAR Launcher",
     "copyright": "Copyright © 2026 ALGZ / ExtaZzZ and contributors. Licensed under GPL-3.0-only.",
     "asar": true,
     "afterPack": "./scripts/afterPack.cjs",
@@ -70,10 +70,10 @@
       "verifyUpdateCodeSignature": true
     },
     "portable": {
-      "artifactName": "Arma-Reforger-Launcher-${version}-${arch}-Portable.${ext}"
+      "artifactName": "LAR-Launcher-${version}-${arch}-Portable.${ext}"
     },
     "nsis": {
-      "artifactName": "Arma-Reforger-Launcher-${version}-${arch}-Setup.${ext}",
+      "artifactName": "LAR-Launcher-${version}-${arch}-Setup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
@@ -84,18 +84,22 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "executableName": "arma-reforger-launcher",
       "maintainer": "ALGZ / ExtaZzZ",
       "category": "Game",
       "icon": ".build/app/src/renderer/assets/app-icon.png",
-      "artifactName": "Arma-Reforger-Launcher-${version}-linux-x64.${ext}",
+      "artifactName": "LAR-Launcher-${version}-linux-x64.${ext}",
       "executableArgs": []
     },
     "appImage": {
@@ -105,7 +109,7 @@
       "target": "dmg",
       "category": "public.app-category.games",
       "icon": ".build/app/src/renderer/assets/app-icon.png",
-      "artifactName": "Arma-Reforger-Launcher-${version}-${arch}.${ext}"
+      "artifactName": "LAR-Launcher-${version}-${arch}.${ext}"
     },
     "publish": {
       "provider": "generic",

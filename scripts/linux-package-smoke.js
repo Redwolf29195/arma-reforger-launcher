@@ -122,7 +122,7 @@ async function main() {
       assert.match(renderer.status, /^CapEff:\s+0+$/m, 'Renderer unexpectedly retains effective capabilities.');
     }
     const title = execFileSync('xdotool', ['getwindowname', windowId], { encoding: 'utf8' }).trim();
-    assert.match(title, /Arma Reforger Launcher/i);
+    assert.match(title, /LAR Launcher/i);
     await delay(750);
     assert.equal(child.exitCode, null, 'Installed app exited before its screenshot.');
     execFileSync('import', ['-window', windowId, screenshot]);

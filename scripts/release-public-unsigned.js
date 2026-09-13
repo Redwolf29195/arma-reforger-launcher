@@ -1,5 +1,6 @@
 /*! Copyright (c) 2026 ALGZ / ExtaZzZ. SPDX-License-Identifier: GPL-3.0-only */
 'use strict';
+const { releaseArtifactPrefix } = require('./release-artifact-name');
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -130,8 +131,8 @@ async function checkStagedJavaScript() {
 }
 
 async function validateBuild(buildDirectory, version) {
-  const setupName = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
-  const portableName = `Arma-Reforger-Launcher-${version}-x64-Portable.exe`;
+  const setupName = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
+  const portableName = `${releaseArtifactPrefix(version)}-x64-Portable.exe`;
   const names = [
     portableName,
     setupName,
@@ -223,7 +224,7 @@ async function main() {
       'tests/packageIdentitySmoke.js',
       path.join(buildDirectory, 'win-unpacked', 'resources', 'app.asar'),
       path.join(buildDirectory, 'win-unpacked', 'resources'),
-      path.join(buildDirectory, 'win-unpacked', 'Arma Reforger Launcher.exe'),
+      path.join(buildDirectory, 'win-unpacked', 'LAR Launcher.exe'),
       version,
       'public-unsigned'
     ]);
@@ -231,7 +232,7 @@ async function main() {
       'node_modules/@electron/fuses/dist/bin.js',
       'read',
       '--app',
-      path.join(buildDirectory, 'win-unpacked', 'Arma Reforger Launcher.exe')
+      path.join(buildDirectory, 'win-unpacked', 'LAR Launcher.exe')
     ]);
 
   const validated = await validateBuild(buildDirectory, version);

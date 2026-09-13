@@ -113,7 +113,7 @@ app.whenReady().then(async () => {
       await fs.writeFile(screenshot, frame.toPNG());
       assert.equal(metrics.width, width, `${label}: viewport width`);
       assert.equal(metrics.height, height, `${label}: viewport height`);
-      assert.equal(metrics.heading, language === 'ru' ? 'ДОБРО ПОЖАЛОВАТЬ В ARMA REFORGER LAUNCHER' : 'WELCOME TO ARMA REFORGER LAUNCHER', `${label}: welcome title`);
+      assert.equal(metrics.heading, language === 'ru' ? 'ДОБРО ПОЖАЛОВАТЬ В LAR LAUNCHER' : 'WELCOME TO LAR LAUNCHER', `${label}: welcome title`);
       assert.equal(metrics.headingColor, 'rgb(242, 242, 237)', `${label}: white welcome line`);
       assert.equal(metrics.brandColor, 'rgb(242, 191, 75)', `${label}: yellow launcher name`);
       assert.equal(metrics.horizontalOverflow, false, `${label}: horizontal overflow`);

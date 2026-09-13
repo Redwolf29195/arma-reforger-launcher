@@ -1094,7 +1094,7 @@ app.whenReady().then(async () => {
   if (!result.authenticity.sidebarButton || !result.authenticity.open || !result.authenticity.modalFits
     || result.authenticity.title !== 'About'
     || result.authenticity.sidebarAria !== 'About' || result.authenticity.sidebarTitle !== 'About'
-    || result.authenticity.product !== 'ALGZ Launcher for Arma Reforger'
+    || result.authenticity.product !== 'LAR Launcher'
     || result.authenticity.developer !== 'ALGZ / ExtaZzZ'
     || result.authenticity.discord !== 'Discord: legoshi223'
     || result.authenticity.version !== 'v0.2.9'
@@ -1191,7 +1191,7 @@ app.whenReady().then(async () => {
     throw new Error(`Server navigation translations are invalid: ${JSON.stringify({ en: result.englishInitial.servers, ru: result.russian.servers })}`);
   }
   if (result.englishInitial.homeTools !== 6 || result.englishInitial.homeLegacyContent
-    || result.englishInitial.homeWelcomeTitle !== 'WELCOME TO ARMA REFORGER LAUNCHER' || !result.englishInitial.homeWelcomeKickerRemoved
+    || result.englishInitial.homeWelcomeTitle !== 'WELCOME TO LAR LAUNCHER' || !result.englishInitial.homeWelcomeKickerRemoved
     || !result.englishInitial.normalizedVersionReady || !result.englishInitial.newerInstalledVersionReady
     || !result.englishInitial.homeDescriptionRemoved || !result.englishInitial.homeSessionLabelRemoved
     || result.englishInitial.homePreset !== 'Field Ops' || result.englishInitial.homeSelected !== '3 selected mods'
@@ -1204,7 +1204,7 @@ app.whenReady().then(async () => {
     || !result.homeManual.open || !result.homeManual.closed || result.homeManual.steps !== 4
     || result.homeManual.title !== 'How to get started'
     || result.russian.homeToolsTitle !== 'Возможности лаунчера'
-    || result.russian.homeWelcomeTitle !== 'ДОБРО ПОЖАЛОВАТЬ В ARMA REFORGER LAUNCHER'
+    || result.russian.homeWelcomeTitle !== 'ДОБРО ПОЖАЛОВАТЬ В LAR LAUNCHER'
     || result.russian.homeGuideTitle !== 'Не знаете, с чего начать?'
     || result.russian.homeManualTitle !== 'Как начать работу'
     || result.russian.homeCredit !== 'Официальная сборка ALGZ'

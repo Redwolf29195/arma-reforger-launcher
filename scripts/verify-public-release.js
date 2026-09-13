@@ -1,4 +1,5 @@
 'use strict';
+const { releaseArtifactPrefix } = require('./release-artifact-name');
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -12,7 +13,7 @@ const { artifactNames, assertWindowsUpdateTarget, regularDirectory, regularFile,
 const repository = 'Redwolf29195/arma-reforger-launcher-updates';
 const api = `https://api.github.com/repos/${repository}`;
 const releaseRoot = path.resolve(__dirname, '..', 'dist-release', version);
-const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
+const setup = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
 
 function parsePublicVerifyArguments(argumentsList) {
   assert.ok(argumentsList.length === 0 || (argumentsList.length === 1 && argumentsList[0] === '--with-linux'),

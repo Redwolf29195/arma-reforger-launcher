@@ -29,6 +29,9 @@ test('community builds need no private key and preserve modified source and brid
   const root = await fixture(t);
   const result = await prepareBuild(root, [], { ALGZ_RELEASE_PRIVATE_KEY_FILE: path.join(root, 'does-not-exist.pem') });
   assert.equal(result.releaseTier, 'community');
+  const runtimePackage = JSON.parse(await fs.readFile(path.join(result.stagedAppRoot, 'package.json'), 'utf8'));
+  assert.equal(runtimePackage.name, 'arma-reforger-launcher');
+  assert.equal(runtimePackage.productName, undefined, 'Display branding must not move the Electron userData directory');
   for (const [source, output] of [
     ['src/sample.js', 'src/sample.js'],
     ['support/ALGZLauncherWorkshopBridge/Scripts/Game/bridge.c', 'launcher-addons/ALGZLauncherWorkshopBridge/Scripts/Game/bridge.c']

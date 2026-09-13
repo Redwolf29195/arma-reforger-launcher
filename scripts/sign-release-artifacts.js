@@ -1,4 +1,5 @@
 'use strict';
+const { releaseArtifactPrefix } = require('./release-artifact-name');
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -68,8 +69,8 @@ function privateKeyPath() {
 }
 
 function expectedInstallerPattern(version) {
-  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^Arma-Reforger-Launcher-${escapedVersion}-(?:x64|ia32|arm64)-Setup\\.exe$`);
+  const escapedVersion = releaseArtifactPrefix(version).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escapedVersion}-(?:x64|ia32|arm64)-Setup\\.exe$`);
 }
 
 async function writeTextAtomically(filePath, contents) {

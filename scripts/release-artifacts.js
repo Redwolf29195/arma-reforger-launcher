@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 'use strict';
+const { releaseArtifactPrefix } = require('./release-artifact-name');
 
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -9,9 +10,9 @@ const path = require('node:path');
 
 function artifactNames(version, { withLinux = false } = {}) {
   assert.match(version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
-  const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
+  const setup = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
   return [
-    `Arma-Reforger-Launcher-${version}-x64-Portable.exe`, setup,
+    `${releaseArtifactPrefix(version)}-x64-Portable.exe`, setup,
     `${setup}.algz.json`, `${setup}.blockmap`, 'latest.yml',
     ...(withLinux ? linuxArtifactNames(version) : [])
   ].sort();
@@ -19,7 +20,7 @@ function artifactNames(version, { withLinux = false } = {}) {
 
 function linuxArtifactNames(version) {
   assert.match(version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
-  return [`.AppImage`, `.deb`].map(extension => `Arma-Reforger-Launcher-${version}-linux-x64${extension}`);
+  return [`.AppImage`, `.deb`].map(extension => `${releaseArtifactPrefix(version)}-linux-x64${extension}`);
 }
 
 function parseReleaseArguments(argumentsList) {
@@ -128,7 +129,7 @@ async function validateLinuxArtifacts(directory, version) {
 }
 
 function assertWindowsUpdateTarget(contents, version) {
-  const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
+  const setup = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
   for (const [expression, expected, field] of [
     [/^version:\s*(\S+)\s*$/gm, version, 'version'],
     [/^path:\s*(\S+)\s*$/gm, setup, 'path'],

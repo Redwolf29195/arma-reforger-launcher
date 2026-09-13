@@ -109,7 +109,8 @@ img {
   height: 22px;
   display: grid;
   place-items: center;
-  background: var(--accent);
+  background: transparent;
+  object-fit: contain;
   color: #161616;
   font-weight: 900;
   font-size: 10px;
@@ -268,6 +269,15 @@ img {
   font-weight: 800;
 }
 
+.brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 182px;
+  height: 122px;
+  object-fit: contain;
+  margin: 6px auto 0;
+}
+
 .brand-title {
   margin-top: 14px;
   font-family: "Bahnschrift Condensed", "Arial Narrow", "Segoe UI", sans-serif;
@@ -278,9 +288,10 @@ img {
 
 .brand-subtitle {
   margin-top: 9px;
-  color: var(--accent);
-  font-size: 17px;
-  font-weight: 900;
+  color: #d7d9d8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
 }
 
 .main-nav {
@@ -382,7 +393,8 @@ img {
 .about-brand-mark {
   display: grid;
   place-items: center;
-  background: var(--accent);
+  background: transparent;
+  object-fit: contain;
   color: #171511;
   font-family: "Arial Narrow", "Segoe UI", sans-serif;
   font-weight: 900;
@@ -4557,7 +4569,16 @@ dialog.mandatory-update-dialog {
     grid-template-columns: 204px minmax(0, 1fr);
   }
 
-  .brand-title {
+  .brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 182px;
+  height: 122px;
+  object-fit: contain;
+  margin: 6px auto 0;
+}
+
+.brand-title {
     font-size: 29px;
   }
 

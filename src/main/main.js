@@ -711,7 +711,7 @@ function createWindow() {
     frame: false,
     backgroundColor: '#17191b',
     show: false,
-    title: 'Arma Reforger Launcher',
+    title: 'LAR Launcher',
     icon: path.join(__dirname, '..', 'renderer', 'assets', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -1664,7 +1664,7 @@ app.whenReady().then(async () => {
   createWindow();
 }).catch((error) => {
   console.error(`Launcher startup failed: ${error?.stack || error}`);
-  dialog.showErrorBox('Arma Reforger Launcher', 'The launcher could not start safely. Reinstall it from the official ALGZ release page.');
+  dialog.showErrorBox('LAR Launcher', 'The launcher could not start safely. Reinstall it from the official ALGZ release page.');
   app.exit(1);
 });
 

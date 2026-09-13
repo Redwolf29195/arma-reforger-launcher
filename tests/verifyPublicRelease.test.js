@@ -1,4 +1,5 @@
 'use strict';
+const { releaseArtifactPrefix } = require('../scripts/release-artifact-name');
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
@@ -14,9 +15,9 @@ const {
 const version = require('../package.json').version;
 const tag = `v${version}`;
 const repository = 'Redwolf29195/arma-reforger-launcher-updates';
-const setup = `Arma-Reforger-Launcher-${version}-x64-Setup.exe`;
+const setup = `${releaseArtifactPrefix(version)}-x64-Setup.exe`;
 const names = [
-  `Arma-Reforger-Launcher-${version}-x64-Portable.exe`,
+  `${releaseArtifactPrefix(version)}-x64-Portable.exe`,
   setup,
   `${setup}.algz.json`,
   `${setup}.blockmap`,
@@ -60,7 +61,7 @@ test('Linux public verification is explicit and accepts no unknown or duplicate 
 });
 
 test('with-linux requires seven exact tag-scoped names and one digest for each Linux package', () => {
-  const linuxNames = [`.AppImage`, `.deb`].map(extension => `Arma-Reforger-Launcher-${version}-linux-x64${extension}`);
+  const linuxNames = [`.AppImage`, `.deb`].map(extension => `${releaseArtifactPrefix(version)}-linux-x64${extension}`);
   const allNames = [...names, ...linuxNames];
   const digest = 'b'.repeat(64);
   const html = allNames.map(name => `<a href="/${repository}/releases/download/${tag}/${encodeURIComponent(name)}"></a>
