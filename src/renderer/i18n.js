@@ -1100,6 +1100,8 @@
     'OVERVIEW': 'ОБЗОР',
     'ALGZ community widgets': 'Виджеты сообщества ALGZ',
     'Open ALGZ Discord': 'Открыть Discord ALGZ',
+    'Need help?': 'Нужна помощь?',
+    'Need help? Open ALGZ Discord': 'Нужна помощь? Открыть Discord ALGZ',
     'Open ALGZ website': 'Открыть сайт ALGZ',
     'Website': 'Сайт',
     'Official ALGZ distribution · ExtaZzZ': 'Официальная сборка ALGZ · ExtaZzZ',

@@ -301,7 +301,8 @@ img {
   gap: 3px;
 }
 
-.nav-item {
+.nav-item,
+.sidebar-help {
   position: relative;
   width: 100%;
   height: 46px;
@@ -319,7 +320,9 @@ img {
   transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
 
-.nav-item:hover {
+.nav-item:hover,
+.sidebar-help:hover,
+.sidebar-help:focus-visible {
   background: #25292c;
   color: var(--text);
 }
@@ -948,45 +951,30 @@ img {
   height: 20px;
 }
 
-.sidebar-community {
+.sidebar-help {
+  grid-template-columns: minmax(0, 1fr) 28px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sidebar-help:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.sidebar-discord-mark {
+  width: 28px;
+  height: 28px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 7px 8px;
-  margin: 0 10px 14px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: #1d2022;
+  place-items: center;
+  border: 1px solid rgba(88, 101, 242, 0.8);
+  border-radius: 3px;
+  background: #303766;
 }
 
-.sidebar-community-copy p {
-  margin: 0 0 3px;
-  color: var(--accent);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-}
-
-.sidebar-community-copy strong {
-  font-size: 14px;
-}
-
-.sidebar-community .home-community-link {
-  width: 32px;
-  height: 34px;
-}
-
-.sidebar-community .home-community-link img {
+.sidebar-discord-mark img {
   width: 18px;
   height: 18px;
-}
-
-.sidebar-community > small {
-  grid-column: 1 / -1;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.4;
 }
 
 .home-manual-dialog {
@@ -4672,7 +4660,7 @@ dialog.mandatory-update-dialog {
   .brand-panel { min-height: 160px; padding: 16px 18px; }
   .brand-logo { height: 105px; }
   .main-nav { padding: 10px; gap: 2px; }
-  .nav-item { height: 38px; }
+  .nav-item, .sidebar-help { height: 38px; }
   .home-dashboard { grid-template-rows: minmax(160px, 0.9fr) minmax(min-content, 1.25fr) minmax(90px, 0.5fr); }
   .home-hero { min-height: 160px; }
   .home-hero-copy { padding: 14px 18px; }
@@ -4688,7 +4676,7 @@ dialog.mandatory-update-dialog {
   .brand-panel { min-height: 144px; padding-block: 14px; }
   .brand-logo { height: 90px; }
   .main-nav { padding-block: 8px; }
-  .nav-item { height: 34px; }
+  .nav-item, .sidebar-help { height: 34px; }
 }
 
 @media (max-width: 1160px) {
