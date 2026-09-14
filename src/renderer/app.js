@@ -946,7 +946,7 @@ function renderModAcquisitionControls() {
       || (updating ? !availability.installed : availability.installed);
     button.querySelector('span').textContent = t(updating ? 'workshop.update'
       : availability.installed ? 'workshop.installed' : 'workshop.download');
-    if (button.id === 'downloadModDetails') {
+    if (button.id === 'downloadModDetails' || button.classList.contains('workshop-install')) {
       button.classList.toggle('primary', !availability.installed);
       button.classList.toggle('secondary', availability.installed);
     }
@@ -1225,7 +1225,7 @@ function renderWorkshopCards(items) {
     const gallery = getWorkshopCardGallery(mod);
     const previewUrl = gallery.images[gallery.index] || mod.previewUrl || '';
     const galleryHidden = gallery.images.length < 2 ? 'hidden' : '';
-    const addAction = `<button class="button primary workshop-add"><img src="assets/icons/plus.svg" alt="">${escapeHtml(t('workshop.add'))}</button>`;
+    const addAction = `<button class="button secondary workshop-add"><img src="assets/icons/plus.svg" alt="">${escapeHtml(t('workshop.add'))}</button>`;
     const audience = Number.isFinite(Number(mod.subscriberCount))
       ? t('workshop.subscribers', { count: formatCount(mod.subscriberCount) })
       : t('workshop.downloads', { count: formatCount(mod.downloads) });
@@ -1252,14 +1252,14 @@ function renderWorkshopCards(items) {
             <span>${escapeHtml(audience)}</span>
             <span>${escapeHtml(`${mod.ratingPercent}%`)}</span>
           </div>
+          <div class="workshop-download-actions">
+            <button class="button ${local ? 'secondary' : 'primary'} workshop-install" type="button" data-mod-download="${escapeHtml(mod.modId)}" disabled><img src="assets/icons/download.svg" alt=""><span>${escapeHtml(t(local ? 'workshop.installed' : 'workshop.download'))}</span></button>
+            <button class="button primary workshop-update" type="button" data-mod-update="${escapeHtml(mod.modId)}" ${local ? 'disabled' : 'hidden'}><img src="assets/icons/refresh-cw.svg" alt=""><span>${escapeHtml(t('workshop.update'))}</span></button>
+          </div>
           <div class="workshop-card-actions">
             ${addAction}
             <button class="icon-button bordered workshop-details" title="${escapeHtml(t('workshop.details'))}"><img src="assets/icons/blocks.svg" alt=""></button>
             ${local ? `<button class="icon-button bordered workshop-delete danger-text" title="${escapeHtml(t('mods.delete'))}"><img src="assets/icons/trash-2.svg" alt=""></button>` : ''}
-          </div>
-          <div class="workshop-download-actions">
-            <button class="button secondary workshop-install" type="button" data-mod-download="${escapeHtml(mod.modId)}" disabled><img src="assets/icons/download.svg" alt=""><span>${escapeHtml(t(local ? 'workshop.installed' : 'workshop.download'))}</span></button>
-            <button class="button secondary workshop-update" type="button" data-mod-update="${escapeHtml(mod.modId)}" ${local ? 'disabled' : 'hidden'}><img src="assets/icons/refresh-cw.svg" alt=""><span>${escapeHtml(t('workshop.update'))}</span></button>
           </div>
         </div>
       </article>`;
