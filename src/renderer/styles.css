@@ -952,9 +952,16 @@ img {
 }
 
 .sidebar-help {
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: 22px minmax(0, 1fr) 28px;
+  gap: 8px;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.sidebar-help-icon {
+  width: 17px;
+  height: 17px;
+  filter: invert(86%);
 }
 
 .sidebar-help:focus-visible {
@@ -4681,6 +4688,8 @@ dialog.mandatory-update-dialog {
 
 @media (max-width: 1160px) {
   .home-tool-card { grid-template-columns: 36px minmax(0, 1fr); }
+  .sidebar-help { grid-template-columns: 22px minmax(0, 1fr) 24px; gap: 6px; padding-right: 8px; font-size: 13px; }
+  .sidebar-discord-mark { width: 24px; height: 26px; }
   .home-tool-icon { width: 36px; height: 36px; }
   .home-tool-meta { display: none; }
   .home-bottom-grid { grid-template-columns: minmax(0, 1.4fr) minmax(230px, 0.8fr); }
