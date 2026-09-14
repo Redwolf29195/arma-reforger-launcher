@@ -2554,7 +2554,6 @@ function renderModDetails() {
     ? details.versions.map((version) => `
       <div class="mod-version-row">
         <strong>${escapeHtml(version.version || '—')}</strong>
-        <span>${escapeHtml(version.gameVersion || '—')}</span>
         <span>${escapeHtml(formatBytes(version.sizeBytes))}</span>
         <span>${escapeHtml(formatDate(version.createdAt))}</span>
       </div>`).join('')
@@ -2591,7 +2590,6 @@ function renderModDetails() {
           ${detailFact('GUID', details.modId)}
           ${detailFact(t('mods.installedVersion'), local.version || t('mods.notInstalledValue'))}
           ${detailFact(t('mods.workshopVersion'), details.version)}
-          ${detailFact(t('mods.gameVersion'), details.gameVersion)}
           ${detailFact(t('mods.size'), formatBytes(details.sizeBytes))}
           ${detailFact(t('mods.downloads'), formatCount(details.downloads))}
           ${detailFact(t('mods.rating'), rating)}

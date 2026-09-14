@@ -4307,7 +4307,7 @@ dialog.mandatory-update-dialog {
 .mod-version-row {
   min-height: 36px;
   display: grid;
-  grid-template-columns: 1fr 1fr 110px 110px;
+  grid-template-columns: minmax(0, 1fr) 110px 110px;
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--line-soft);
@@ -4753,7 +4753,7 @@ dialog.mandatory-update-dialog {
   }
 
   .mod-version-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     padding: 7px 0;
   }
 
