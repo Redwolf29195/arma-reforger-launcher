@@ -33,32 +33,42 @@
       <div class="brand-panel">
         <div class="brand-kicker">COMMUNITY TOOLS</div>
         <img class="brand-logo" src="assets/lar-launcher-logo.png" alt="LAR Launcher">
-        <div class="brand-subtitle">FOR ARMA REFORGER</div>
       </div>
 
-      <nav class="main-nav" aria-label="Sections">
-        <button class="nav-item active" data-view="dashboard">
-          <img src="assets/icons/layout-dashboard.svg" alt=""><span>Dashboard</span>
-        </button>
-        <button class="nav-item" data-view="mods">
-          <img src="assets/icons/blocks.svg" alt=""><span>Mods</span><b id="navModsCount">0</b>
-        </button>
-        <button class="nav-item" data-view="workshop">
-          <img src="assets/icons/store.svg" alt=""><span>Workshop</span>
-        </button>
-        <button class="nav-item" data-view="servers">
-          <img src="assets/icons/server.svg" alt=""><span>Servers</span>
-        </button>
-        <button class="nav-item" data-view="presets">
-          <img src="assets/icons/layers-3.svg" alt=""><span>Presets</span><b id="navPresetsCount">0</b>
-        </button>
-        <button class="nav-item" data-view="parameters">
-          <img src="assets/icons/sliders-horizontal.svg" alt=""><span>Parameters</span>
-        </button>
-        <button class="nav-item" data-view="settings">
-          <img src="assets/icons/settings.svg" alt=""><span>Settings</span>
-        </button>
-      </nav>
+      <div class="sidebar-navigation">
+        <nav class="main-nav" aria-label="Sections">
+          <button class="nav-item active" data-view="dashboard">
+            <img src="assets/icons/layout-dashboard.svg" alt=""><span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-view="mods">
+            <img src="assets/icons/blocks.svg" alt=""><span>Mods</span><b id="navModsCount">0</b>
+          </button>
+          <button class="nav-item" data-view="workshop">
+            <img src="assets/icons/store.svg" alt=""><span>Workshop</span>
+          </button>
+          <button class="nav-item" data-view="servers">
+            <img src="assets/icons/server.svg" alt=""><span>Servers</span>
+          </button>
+          <button class="nav-item" data-view="presets">
+            <img src="assets/icons/layers-3.svg" alt=""><span>Presets</span><b id="navPresetsCount">0</b>
+          </button>
+          <button class="nav-item" data-view="parameters">
+            <img src="assets/icons/sliders-horizontal.svg" alt=""><span>Parameters</span>
+          </button>
+          <button class="nav-item" data-view="settings">
+            <img src="assets/icons/settings.svg" alt=""><span>Settings</span>
+          </button>
+        </nav>
+
+        <article class="sidebar-community" aria-label="ALGZ community widgets">
+          <div class="sidebar-community-copy"><p data-home-i18n="home.communityKicker">COMMUNITY</p><strong>ALGZ</strong></div>
+          <div class="home-community-links">
+            <a class="home-community-link discord" id="sidebarDiscordLink" href="https://discord.gg/P54RqqWDE" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ Discord" title="Open ALGZ Discord"><img src="assets/icons/discord.svg" alt=""></a>
+            <a class="home-community-link website" id="sidebarWebsiteLink" href="https://armalaucher.com/" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ website" title="Open ALGZ website"><img src="assets/icons/globe-2.svg" alt=""></a>
+          </div>
+          <small data-home-i18n="home.communityCredit">Official ALGZ distribution</small>
+        </article>
+      </div>
 
       <div class="sidebar-footer">
         <div class="game-detection" id="gameDetection">
