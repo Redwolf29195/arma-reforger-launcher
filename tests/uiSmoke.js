@@ -838,8 +838,8 @@ app.whenReady().then(async () => {
       deletionWarning,
       homeManual,
       homeNavigation,
-      presetActionOrder: [...document.querySelectorAll('.details-actions > button')]
-        .slice(0, 3)
+      presetActionOrder: [...document.querySelectorAll('.details-actions button')]
+        .slice(0, 4)
         .map((button) => ({ id: button.id, label: button.textContent.trim() })),
       automaticUpdates: {
         present: Boolean(document.querySelector('#settingAutoUpdate')),
@@ -1020,6 +1020,7 @@ app.whenReady().then(async () => {
   const expectedPresetActions = [
     { id: 'editPreset', label: 'Edit' },
     { id: 'sharePreset', label: 'Share' },
+    { id: 'importPreset', label: 'Import JSON' },
     { id: 'shareFilePreset', label: 'Export' }
   ];
   if (JSON.stringify(result.presetActionOrder) !== JSON.stringify(expectedPresetActions)) {

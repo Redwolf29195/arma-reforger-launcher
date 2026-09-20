@@ -1,6 +1,6 @@
 {
   "name": "arma-reforger-launcher",
-  "version": "0.3.55",
+  "version": "0.3.56",
   "description": "LAR Launcher: presets, mods and servers",
   "main": "src/main/main.js",
   "private": true,

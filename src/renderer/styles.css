@@ -2519,12 +2519,15 @@ button:disabled {
 }
 
 .preset-toolbar {
+  justify-content: center;
   padding: 14px;
   border-bottom: 1px solid var(--line);
 }
 
-.preset-toolbar .button {
-  flex: 1;
+.preset-transfer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .preset-list {

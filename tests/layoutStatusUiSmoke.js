@@ -94,6 +94,18 @@ app.whenReady().then(async () => {
             duplicateExport: !!document.querySelector('#exportPreset'),
             imports: view.querySelectorAll('#importPreset').length,
             exports: view.querySelectorAll('#shareFilePreset').length,
+            presetButtons: view.id === 'view-presets' ? (() => {
+              const toolbar = view.querySelector('.preset-toolbar').getBoundingClientRect();
+              const plus = view.querySelector('#newPreset').getBoundingClientRect();
+              const importButton = view.querySelector('#importPreset').getBoundingClientRect();
+              const exportButton = view.querySelector('#shareFilePreset').getBoundingClientRect();
+              return {
+                centerOffset: (plus.left + plus.right - toolbar.left - toolbar.right) / 2,
+                rowOffset: importButton.top - exportButton.top,
+                gap: exportButton.left - importButton.right,
+                right: exportButton.right
+              };
+            })() : null,
             saveRight: view.querySelector('.settings-actions')?.getBoundingClientRect().right,
             cardRight: view.querySelector('.settings-section')?.getBoundingClientRect().right
           };
@@ -106,6 +118,10 @@ app.whenReady().then(async () => {
           assert.equal(metrics.duplicateExport, false);
           assert.equal(metrics.imports, 1);
           assert.equal(metrics.exports, 1);
+          assert.ok(Math.abs(metrics.presetButtons.centerOffset) <= 1, 'New preset button must be centered');
+          assert.ok(Math.abs(metrics.presetButtons.rowOffset) <= 1, 'Import and export must stay on the same row');
+          assert.equal(metrics.presetButtons.gap, 8);
+          assert.ok(metrics.presetButtons.right <= width, 'Preset actions must fit inside the window');
         } else assert.equal(metrics.saveRight, metrics.cardRight);
         layout.push({ language, width, height, view, metrics });
         if (language === 'ru' && width === 1920) {

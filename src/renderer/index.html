@@ -285,7 +285,6 @@
           <div class="preset-layout">
             <div class="preset-browser">
               <div class="preset-toolbar">
-                <button class="button primary" id="importPreset"><img src="assets/icons/file-input.svg" alt="">Import JSON</button>
                 <button class="icon-button bordered" id="newPreset" title="New preset"><img src="assets/icons/plus.svg" alt=""></button>
               </div>
               <div class="preset-list" id="presetList"></div>
@@ -296,7 +295,10 @@
                 <div class="details-actions">
                   <button class="button secondary" id="editPreset"><img src="assets/icons/list-checks.svg" alt="">Edit</button>
                   <button class="button secondary" id="sharePreset"><img src="assets/icons/share-2.svg" alt="">Share</button>
-                  <button class="button primary" id="shareFilePreset"><img src="assets/icons/send.svg" alt="">Export</button>
+                  <div class="preset-transfer-actions">
+                    <button class="button primary" id="importPreset"><img src="assets/icons/file-input.svg" alt="">Import JSON</button>
+                    <button class="button primary" id="shareFilePreset"><img src="assets/icons/send.svg" alt="">Export</button>
+                  </div>
                   <button class="button secondary" id="transferPresetMods" hidden><img src="assets/icons/hard-drive.svg" alt=""><span>Transfer mods</span></button>
                   <button class="icon-button bordered danger-text" id="deletePreset" title="Delete preset"><img src="assets/icons/trash-2.svg" alt=""></button>
                 </div>
