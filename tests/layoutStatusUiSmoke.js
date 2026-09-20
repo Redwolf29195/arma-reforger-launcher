@@ -101,6 +101,7 @@ app.whenReady().then(async () => {
               const exportButton = view.querySelector('#shareFilePreset').getBoundingClientRect();
               return {
                 centerOffset: (plus.left + plus.right - toolbar.left - toolbar.right) / 2,
+                widthGap: toolbar.width - plus.width,
                 rowOffset: importButton.top - exportButton.top,
                 gap: exportButton.left - importButton.right,
                 right: exportButton.right
@@ -119,6 +120,7 @@ app.whenReady().then(async () => {
           assert.equal(metrics.imports, 1);
           assert.equal(metrics.exports, 1);
           assert.ok(Math.abs(metrics.presetButtons.centerOffset) <= 1, 'New preset button must be centered');
+          assert.ok(Math.abs(metrics.presetButtons.widthGap - 28) <= 1, 'New preset button must fill the toolbar inside its padding');
           assert.ok(Math.abs(metrics.presetButtons.rowOffset) <= 1, 'Import and export must stay on the same row');
           assert.equal(metrics.presetButtons.gap, 8);
           assert.ok(metrics.presetButtons.right <= width, 'Preset actions must fit inside the window');

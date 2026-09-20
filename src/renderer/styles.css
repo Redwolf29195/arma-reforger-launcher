@@ -2530,6 +2530,10 @@ button:disabled {
   gap: 8px;
 }
 
+.preset-toolbar #newPreset {
+  width: 100%;
+}
+
 .preset-list {
   max-height: calc(100vh - 260px);
   overflow: auto;
