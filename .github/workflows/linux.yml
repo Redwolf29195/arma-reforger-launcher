@@ -67,6 +67,7 @@ jobs:
           mkdir -p artifacts
           xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/uiSmoke.js "$PWD/artifacts/linux-ui.png"
           xvfb-run -a --server-args="-screen 0 1920x1080x24" dbus-run-session -- pnpm exec electron tests/serverUiSmoke.js "$PWD/artifacts/linux-servers.png"
+          xvfb-run -a --server-args="-screen 0 2880x1800x24" dbus-run-session -- pnpm exec electron tests/layoutStatusUiSmoke.js "$PWD/artifacts/layout-status"
       - name: Build separate Linux packages without a signing key
         id: build-linux
         run: pnpm run dist:linux

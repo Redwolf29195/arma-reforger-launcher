@@ -818,8 +818,7 @@ function renderHeaderActions() {
       <button class="button secondary" data-header-action="import"><img src="assets/icons/file-input.svg" alt="">${t('header.import')}</button>
       <button class="button secondary" data-header-action="share-file"><img src="assets/icons/send.svg" alt="">${t('header.friendFile')}</button>
       <button class="button primary" data-header-action="save"><img src="assets/icons/save.svg" alt="">${t(state.activePreset ? 'header.renamePreset' : 'header.savePreset')}</button>`;
-  } else if (state.currentView === 'presets') {
-    container.innerHTML = `<button class="button primary" data-header-action="import"><img src="assets/icons/file-input.svg" alt="">${t('header.importJson')}</button>`;
+
   } else {
     container.innerHTML = '';
   }
@@ -1425,10 +1424,33 @@ function isFavoriteServer(serverId) {
   return favoriteServerItems().some((server) => server.id === serverId);
 }
 
+const serverStatusSnapshots = new Map();
+
+function rememberServerStatuses(servers) {
+  for (const server of servers) {
+    serverStatusSnapshots.delete(server.id);
+    serverStatusSnapshots.set(server.id, { status: server.status, lastUpdated: server.lastUpdated });
+  }
+  while (serverStatusSnapshots.size > 500) serverStatusSnapshots.delete(serverStatusSnapshots.keys().next().value);
+}
+
+function renderServerAvailability(server) {
+  const availability = window.launcherServerAvailability.assessServerAvailability(server);
+  const reason = state.serverSort !== 'favorites' && state.serverRefreshFailures > 0 ? 'unknown' : availability.reason;
+  const status = ['online', 'offline'].includes(reason) ? reason : 'unknown';
+  const label = t('servers.status.' + status);
+  const date = Date.parse(server.lastUpdated || '');
+  const hint = status === 'unknown'
+    ? t(reason === 'stale' ? 'servers.status.staleHint' : 'servers.status.unknownHint')
+    : t('servers.status.catalogHint', { updated: new Date(date).toLocaleString(locale()) });
+  return '<span class="server-availability" data-server-status="' + status + '" title="' + escapeHtml(hint) + '" aria-label="' + escapeHtml(label + '. ' + hint) + '">' + escapeHtml(label) + '</span>';
+}
+
 function filteredFavoriteServers() {
   const query = state.serverQuery.trim().toLocaleLowerCase(locale());
-  if (!query) return favoriteServerItems();
-  return favoriteServerItems().filter((server) => [server.name, server.address, server.scenarioName]
+  const favorites = favoriteServerItems().map((server) => ({ ...server, ...serverStatusSnapshots.get(server.id) }));
+  if (!query) return favorites;
+  return favorites.filter((server) => [server.name, server.address, server.scenarioName]
     .some((value) => String(value || '').toLocaleLowerCase(locale()).includes(query)));
 }
 
@@ -1509,7 +1531,7 @@ function renderServerDetails() {
           <button class="button secondary" type="button" data-server-copy-json title="${escapeHtml(t('servers.copyJsonTitle'))}" ${state.busy || mods.length === 0 ? 'disabled' : ''}><img src="assets/icons/copy.svg" alt="">${escapeHtml(t('servers.copyJson'))}</button>
           <button class="button primary" type="button" data-server-connect ${state.busy ? 'disabled' : ''}><img src="assets/icons/play.svg" alt="">${escapeHtml(t('servers.connect'))}</button>
         </div>
-        <div class="server-details-identity"><h2>${escapeHtml(server.name)}</h2><small>${escapeHtml(server.address)}</small></div>
+        <div class="server-details-identity"><h2>${escapeHtml(server.name)}</h2><small>${escapeHtml(server.address)}</small>${renderServerAvailability(server)}</div>
       </div>
       <div class="server-facts">
         <div><span>${escapeHtml(t('servers.players'))}</span><strong>${escapeHtml(`${formatCount(server.playerCount)}/${formatCount(server.playerLimit)}`)}${server.queueCount ? ` +${formatCount(server.queueCount)}` : ''}</strong></div>
@@ -1560,6 +1582,7 @@ function renderServers() {
         <button class="server-favorite-toggle ${favorite ? 'active' : ''}" type="button" data-server-favorite="${escapeHtml(server.id)}" title="${escapeHtml(t(favorite ? 'servers.removeFavorite' : 'servers.addFavorite'))}" aria-label="${escapeHtml(t(favorite ? 'servers.removeFavorite' : 'servers.addFavorite'))}" aria-pressed="${favorite}"><span aria-hidden="true">★</span></button>
         <small>${escapeHtml(server.scenarioName || server.address)}</small>
         <span class="server-row-meta">
+          ${renderServerAvailability(server)}
           <span>${escapeHtml(server.address)}</span>
           ${server.queueCount ? `<span>${escapeHtml(t('servers.queue', { count: server.queueCount }))}</span>` : ''}
           ${server.passwordProtected ? `<span>${escapeHtml(t('servers.password'))}</span>` : ''}
@@ -1585,10 +1608,15 @@ async function loadServerDetails(serverId, options = {}) {
     const details = await api.getServerDetails(serverId, { refresh: options.refresh === true });
     if (request !== serverDetailsRequest || state.selectedServerId !== serverId) return;
     state.serverDetails = details;
+    rememberServerStatuses([details.server]);
+    state.serverItems = state.serverItems.map((server) => server.id === serverId ? { ...server, ...details.server } : server);
     state.serverDetailsError = '';
     state.serverDetailsLastLoadedAt = Date.now();
   } catch (error) {
     if (request !== serverDetailsRequest || state.selectedServerId !== serverId) return;
+    state.serverItems = state.serverItems.map((server) => server.id === serverId ? { ...server, status: '' } : server);
+    rememberServerStatuses(state.serverItems.filter((server) => server.id === serverId));
+    if (state.serverDetails?.server?.id === serverId) state.serverDetails.server.status = '';
     if (!silent) state.serverDetailsError = errorMessage(error);
   } finally {
     if (request === serverDetailsRequest) {
@@ -1650,6 +1678,7 @@ async function loadServers(options = {}) {
     );
     if (request !== serverListRequest) return;
     state.serverItems = result.items || [];
+    rememberServerStatuses(state.serverItems);
     state.serverPage = result.page || state.serverPage;
     state.serverPageSize = result.pageSize || state.serverPageSize;
     state.serverHasNext = result.hasNext === true;
@@ -2726,7 +2755,6 @@ function renderPresets() {
   const preset = state.activePreset || (state.selectedIds.size ? snapshotPreset() : null);
   $('#presetDetailsName').textContent = preset ? currentPresetName() : t('presets.none');
   $('#editPreset').disabled = !state.activePreset;
-  $('#exportPreset').disabled = !preset;
   $('#sharePreset').disabled = !preset;
   $('#shareFilePreset').disabled = !preset;
   $('#deletePreset').disabled = !state.activePreset;
@@ -3586,15 +3614,6 @@ async function savePreset() {
     showToast(errorMessage(error), 'error');
   } finally {
     setBusy(false);
-  }
-}
-
-async function exportPreset() {
-  const preset = snapshotPreset();
-  try {
-    if (await api.exportPreset(preset)) showToast(t('toast.presetExported'));
-  } catch (error) {
-    showToast(errorMessage(error), 'error');
   }
 }
 
@@ -4559,7 +4578,6 @@ function bindEvents() {
     if (button && !button.disabled) deleteInstalledMod(button.dataset.deleteInstalledMod);
   });
   $('#editPreset').addEventListener('click', editActivePreset);
-  $('#exportPreset').addEventListener('click', exportPreset);
   $('#sharePreset').addEventListener('click', sharePreset);
   $('#shareFilePreset').addEventListener('click', sharePresetFile);
   $('#transferPresetMods').addEventListener('click', openPresetTransferDialog);
