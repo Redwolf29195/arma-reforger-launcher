@@ -2,7 +2,7 @@
 
 The GPL source is maintained in [`Redwolf29195/arma-reforger-launcher`](https://github.com/Redwolf29195/arma-reforger-launcher). Official Windows and Linux downloads remain in [`Redwolf29195/arma-reforger-launcher-updates`](https://github.com/Redwolf29195/arma-reforger-launcher-updates).
 
-Открытые исходники и официальные файлы обновлений находятся в разных репозиториях, указанных выше. Обычная сборка не требует ключа владельца. Закрытый ключ используется только владельцем для подписи файлов официального канала обновлений.
+Исходники и официальные файлы обновлений находятся в разных репозиториях, указанных выше. Обычная сборка не требует ключа владельца. Закрытый ключ используется только владельцем для подписи файлов официального канала обновлений.
 
 ## Build from source
 
@@ -20,7 +20,7 @@ For Windows Setup and Portable packages:
 pnpm run dist:win
 ```
 
-`scripts/prepare-build.js` copies readable application source, license notices and the included Workshop bridge into `.build/app`. It does not obfuscate code or require a private release key. Output directories are configured in `package.json`.
+`scripts/prepare-build.js` copies application source, license notices and the included Workshop bridge into `.build/app`. It does not require a private release key. Output directories are configured in `package.json`.
 
 On Linux, `pnpm run dist:linux` builds separate x64 DEB and AppImage packages. The Linux workflow validates Ubuntu 22.04 and 24.04, including source tests, Electron UI checks, the installed DEB and the extracted AppImage payload with sandboxing enabled. It does not test a mounted AppImage or start Arma Reforger; Steam/Proton and real game compatibility require separate validation. The macOS target remains unvalidated.
 

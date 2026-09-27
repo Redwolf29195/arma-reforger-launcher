@@ -49,8 +49,8 @@ pnpm run pack
 pnpm run dist:win
 ```
 
-Build preparation copies readable source and the Workshop bridge to `.build/app`. These commands require no obfuscation or private signing key.
-Подготовка сборки копирует читаемые исходники и мост Workshop в `.build/app`. Обфускация и закрытый ключ подписи для этих команд не нужны.
+Build preparation copies source and the Workshop bridge to `.build/app`. These commands require no private signing key.
+Подготовка сборки копирует исходники и мост Workshop в `.build/app`. Закрытый ключ подписи для этих команд не нужен.
 
 `pnpm run dist:linux` builds separate x64 AppImage and Debian packages on Linux. The Ubuntu 22.04/24.04 [CI workflow](.github/workflows/linux.yml) runs the unit suite, renderer checks and a real installed-package smoke with the sandbox enabled. `pnpm run dist:mac` remains an additional, unvalidated packaging target.
 

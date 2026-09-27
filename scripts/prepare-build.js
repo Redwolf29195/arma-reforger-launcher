@@ -53,7 +53,6 @@ async function prepareBuild(projectRoot, argumentsList = [], environment = proce
   await fs.symlink(path.join(projectRoot, 'node_modules'), path.join(stagedAppRoot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   const securityRoot = path.join(stagedAppRoot, 'src', 'security');
   await fs.mkdir(securityRoot, { recursive: true });
-  await fs.rm(path.join(securityRoot, 'release-manifest.json'), { force: true });
   const buildInfo = {
     schema: 1,
     version: metadata.version,
