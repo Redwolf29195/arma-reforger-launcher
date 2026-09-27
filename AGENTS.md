@@ -2,7 +2,7 @@
 
 ## Repository scope
 
-- This is the private source repository for the GPL-3.0-only launcher. Keep its GitHub visibility private unless the owner explicitly requests a change. Do not publish announcements about repository maintenance.
+- This is the public source repository for the GPL-3.0-only launcher. Keep its GitHub visibility public unless the owner explicitly requests a change. Do not publish announcements about repository maintenance.
 - Preserve GPL notices and author credits. Third-party components retain their own terms; update `THIRD_PARTY_NOTICES.md` when they change.
 - Keep application and Workshop bridge source readable. Ordinary development and packaging must work without the owner's private signing key.
 - Keep work within the launcher project. Ordinary builds and tests must not modify a user's installed game, server, mods, presets or profiles. Use temporary fixtures and mocked game interfaces.

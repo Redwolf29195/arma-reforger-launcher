@@ -442,26 +442,10 @@ img {
   box-shadow: 0 0 0 3px rgba(119, 125, 129, 0.1);
 }
 
-.sidebar-build-button[data-status="verified"] .sidebar-build-state,
-.sidebar-build-button[data-status="verified-unsigned"] .sidebar-build-state,
-.about-setting-row[data-status="verified"] .about-setting-state,
-.about-setting-row[data-status="verified-unsigned"] .about-setting-state {
-  background: var(--ready);
-  box-shadow: 0 0 0 3px rgba(104, 185, 133, 0.12);
-}
-
-.sidebar-build-button[data-status="verified-local"] .sidebar-build-state,
 .sidebar-build-button[data-status="development"] .sidebar-build-state,
-.about-setting-row[data-status="verified-local"] .about-setting-state,
 .about-setting-row[data-status="development"] .about-setting-state {
   background: var(--accent);
   box-shadow: 0 0 0 3px rgba(227, 162, 58, 0.12);
-}
-
-.sidebar-build-button[data-status="tampered"] .sidebar-build-state,
-.about-setting-row[data-status="tampered"] .about-setting-state {
-  background: var(--danger);
-  box-shadow: 0 0 0 3px rgba(223, 106, 98, 0.12);
 }
 
 .game-detection {
@@ -2772,11 +2756,6 @@ button:disabled {
   white-space: nowrap;
 }
 
-.about-setting-row[data-status="tampered"] .about-setting-summary strong,
-.about-setting-row[data-status="tampered"] .about-setting-summary small {
-  color: #f0a19a;
-}
-
 #openModLogs b {
   min-width: 24px;
   padding: 2px 5px;
@@ -3139,34 +3118,6 @@ dialog.license-dialog[open] {
   line-height: 1.45;
 }
 
-.about-identity-banner[data-status="verified"] {
-  border-color: #426f52;
-  background: rgba(104, 185, 133, 0.08);
-}
-
-.about-identity-banner[data-status="verified"] span {
-  color: #8fd2a7;
-}
-
-.about-identity-banner[data-status="verified-unsigned"] {
-  border-color: #3e7452;
-  background: rgba(104, 185, 133, 0.08);
-}
-
-.about-identity-banner[data-status="verified-unsigned"] span {
-  color: #8fd2a7;
-}
-
-.about-identity-banner[data-status="tampered"] {
-  border-color: #8b4943;
-  background: rgba(223, 106, 98, 0.1);
-}
-
-.about-identity-banner[data-status="tampered"] span,
-.about-identity-banner[data-status="tampered"] small {
-  color: #f0a19a;
-}
-
 .about-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3282,17 +3233,11 @@ dialog.license-dialog[open] {
   border-left-color: var(--ready);
 }
 
-.about-verification-card[data-status="verified"] strong,
-.about-verification-card[data-status="verified-unsigned"] strong {
+.about-verification-card[data-status="verified"] strong {
   color: #8fd2a7;
 }
 
-.about-verification-card[data-status="verified-unsigned"] {
-  border-left-color: var(--ready);
-}
-
 .about-verification-card[data-status="development"],
-.about-verification-card[data-status="verified-local"],
 .about-verification-card[data-status="unsigned"],
 .about-verification-card[data-status="not-applicable"],
 .about-verification-card[data-status="unavailable"] {
@@ -3300,7 +3245,6 @@ dialog.license-dialog[open] {
 }
 
 .about-verification-card[data-status="development"] strong,
-.about-verification-card[data-status="verified-local"] strong,
 .about-verification-card[data-status="unsigned"] strong,
 .about-verification-card[data-status="not-applicable"] strong,
 .about-verification-card[data-status="unavailable"] strong {
@@ -3308,14 +3252,12 @@ dialog.license-dialog[open] {
 }
 
 .about-verification-card[data-status="invalid"],
-.about-verification-card[data-status="untrusted"],
-.about-verification-card[data-status="tampered"] {
+.about-verification-card[data-status="untrusted"] {
   border-left-color: var(--danger);
 }
 
 .about-verification-card[data-status="invalid"] strong,
-.about-verification-card[data-status="untrusted"] strong,
-.about-verification-card[data-status="tampered"] strong {
+.about-verification-card[data-status="untrusted"] strong {
   color: #f0a19a;
 }
 
