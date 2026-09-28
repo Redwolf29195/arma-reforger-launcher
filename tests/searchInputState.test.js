@@ -93,6 +93,7 @@ function createHarness() {
     clearTimeout(id) { timers.delete(id); }
   };
   vm.createContext(context);
+  vm.runInContext(sourceBetween('function renderWorkshopPageNumbers()', '\nfunction renderWorkshop()'), context);
   vm.runInContext(sourceBetween('function renderWorkshop()', '\nasync function loadWorkshop('), context);
   vm.runInContext(sourceBetween('function renderServers()', '\nasync function loadServerDetails('), context);
   return {

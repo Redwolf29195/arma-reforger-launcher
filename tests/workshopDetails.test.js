@@ -186,6 +186,39 @@ test('fetchWorkshopSearch applies supported Workshop category tags', async () =>
   assert.doesNotMatch(requestedUrl, /tags=/);
 });
 
+test('Workshop combines catalog pages into 24 distinct mods per launcher page', async () => {
+  clearWorkshopDetailsCache();
+  const assets = Array.from({ length: 50 }, (_, index) => ({
+    id: index.toString(16).padStart(16, '0'),
+    name: `Mod ${index}`
+  }));
+  const requestedPages = [];
+  const fetchImpl = async (url) => {
+    const page = Number(new URL(url).searchParams.get('page'));
+    requestedPages.push(page);
+    const payload = { props: { pageProps: {
+      page,
+      assets: { count: assets.length, rows: assets.slice((page - 1) * 16, page * 16) }
+    } } };
+    return {
+      ok: true,
+      url,
+      headers: { get: () => '100' },
+      text: async () => `<script id="__NEXT_DATA__">${JSON.stringify(payload)}</script>`
+    };
+  };
+
+  const first = await fetchWorkshopSearch({ page: 1 }, { fetchImpl });
+  const second = await fetchWorkshopSearch({ page: 2 }, { fetchImpl });
+  const last = await fetchWorkshopSearch({ page: 3 }, { fetchImpl });
+
+  assert.equal(first.pageSize, 24);
+  assert.deepEqual(first.items.map((item) => item.name), assets.slice(0, 24).map((item) => item.name));
+  assert.deepEqual(second.items.map((item) => item.name), assets.slice(24, 48).map((item) => item.name));
+  assert.deepEqual(last.items.map((item) => item.name), assets.slice(48).map((item) => item.name));
+  assert.deepEqual(requestedPages, [1, 2, 3, 4]);
+});
+
 test('Workshop timeout covers a stalled response body after headers arrived', async () => {
   clearWorkshopDetailsCache();
   let cancelled = false;

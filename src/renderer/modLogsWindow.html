@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'none'">
+  <title>Mod logs — LAR Launcher</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="mod-logs-window">
+  <main class="mod-logs-standalone">
+    <div class="dialog-header">
+      <div><span id="modLogsEyebrow">MOD ACTIVITY</span><h2 id="modLogsTitle">Mod logs</h2></div>
+      <button class="icon-button" id="closeModLogsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+    </div>
+    <div class="mod-logs-toolbar">
+      <label class="search-field">
+        <img src="assets/icons/search.svg" alt="">
+        <input id="modLogsSearch" type="search" placeholder="Search" autocomplete="off">
+      </label>
+      <div class="mod-logs-filter-field">
+        <select id="modLogsFilter" aria-label="Filter mod logs" hidden tabindex="-1"></select>
+        <div class="styled-select" data-select-for="modLogsFilter"></div>
+      </div>
+    </div>
+    <div class="mod-logs-table-scroll">
+      <div class="mod-log-head">
+        <span id="modLogHeadTime">Time</span><span id="modLogHeadAction">Action</span><span id="modLogHeadMod">Mod</span><span id="modLogHeadPreset">Preset</span><span id="modLogHeadDetails">Details</span><span id="modLogHeadManage">Manage</span>
+      </div>
+      <div id="modLogsList" class="mod-logs-list"></div>
+    </div>
+    <div class="dialog-actions mod-logs-actions">
+      <span id="modLogsSummary"></span>
+      <button class="button quiet danger-text" id="clearModLogs" type="button"><img src="assets/icons/trash-2.svg" alt=""><span>Delete logs</span></button>
+      <button class="button primary" id="closeModLogs" type="button"><span>Close</span></button>
+    </div>
+  </main>
+  <script src="i18n.js"></script>
+  <script src="styledSelect.js"></script>
+  <script src="modLogsWindow.js"></script>
+</body>
+</html>

@@ -151,9 +151,9 @@
 
             <div class="home-bottom-grid">
               <article class="home-guide-card">
-                <span class="home-guide-icon"><img src="assets/icons/list-checks.svg" alt=""></span>
-                <div><p data-home-i18n="home.guideKicker">QUICK START</p><strong data-home-i18n="home.guideTitle">Not sure where to begin?</strong><small data-home-i18n="home.guideDescription">A short guide explains presets, mods and server joining.</small></div>
-                <button class="button secondary" id="homeManualOpen" type="button"><span data-home-i18n="home.guideButton">Open guide</span></button>
+                <span class="home-guide-icon"><img src="assets/icons/play.svg" alt=""></span>
+                <div><p data-home-i18n="home.guideKicker">QUICK START</p><strong data-home-i18n="home.guideTitle">Not sure where to begin?</strong><small data-home-i18n="home.guideDescription">Watch the video guide in your browser.</small></div>
+                <button class="button secondary" id="homeVideoOpen" type="button"><img src="assets/icons/play.svg" alt=""><span data-home-i18n="home.guideButton">Watch video</span></button>
               </article>
               <article class="home-community-card">
                 <div class="home-community-copy"><p data-home-i18n="home.communityKicker">COMMUNITY</p><strong>ALGZ</strong><small class="home-community-credit" data-home-i18n="home.communityCredit">Open-source launcher</small></div>
@@ -175,7 +175,6 @@
             <div class="segmented-control" id="modFilter">
               <button class="active" data-filter="all">All</button>
               <button data-filter="selected">Selected</button>
-              <button data-filter="problems">Problems</button>
             </div>
             <button class="icon-button bordered" id="rescanMods" title="Rescan mods"><img src="assets/icons/refresh-cw.svg" alt=""></button>
           </div>
@@ -218,24 +217,26 @@
               <img src="assets/icons/search.svg" alt="">
               <input id="workshopSearch" type="search" placeholder="Search" autocomplete="off" maxlength="120">
             </label>
-            <label class="workshop-sort-field">
+            <div class="workshop-sort-field">
               <span>Sort</span>
-              <select id="workshopSort">
+              <select id="workshopSort" hidden tabindex="-1" aria-hidden="true">
                 <option value="subscribers">Popular</option>
                 <option value="newest">Newest</option>
                 <option value="rating">Rating</option>
                 <option value="favorites">Favorites</option>
               </select>
-            </label>
+              <div class="styled-select" data-select-for="workshopSort"></div>
+            </div>
             <button class="button primary" type="submit"><img src="assets/icons/search.svg" alt=""><span>Search</span></button>
             <button class="icon-button bordered" id="refreshWorkshop" type="button" title="Refresh Workshop"><img src="assets/icons/refresh-cw.svg" alt=""></button>
           </form>
           <div class="workshop-summary" id="workshopSummary">Official Workshop catalog</div>
           <div class="workshop-grid" id="workshopGrid"></div>
           <div class="workshop-pager">
-            <button class="icon-button bordered" id="workshopPrevious" title="Previous page"><img src="assets/icons/chevron-left.svg" alt=""></button>
-            <span id="workshopPageLabel">Page 1</span>
-            <button class="icon-button bordered" id="workshopNext" title="Next page"><img src="assets/icons/chevron-right.svg" alt=""></button>
+            <button class="icon-button bordered" id="workshopPrevious" type="button" title="Previous page"><img src="assets/icons/chevron-left.svg" alt=""></button>
+            <div class="workshop-page-numbers" id="workshopPageNumbers" aria-label="Workshop pages"></div>
+            <button class="icon-button bordered" id="workshopNext" type="button" title="Next page"><img src="assets/icons/chevron-right.svg" alt=""></button>
+            <span class="workshop-page-label" id="workshopPageLabel">Page 1</span>
           </div>
         </section>
 
@@ -245,14 +246,11 @@
               <img src="assets/icons/search.svg" alt="">
               <input id="serverSearch" type="search" placeholder="Search" autocomplete="off" maxlength="120">
             </label>
-            <label class="workshop-sort-field server-sort-field">
-              <span>Sort</span>
-              <select id="serverSort">
-                <option value="players_desc">Most players</option>
-                <option value="popularity">Popular</option>
-                <option value="favorites">Favorites</option>
-              </select>
-            </label>
+            <select id="serverSort" hidden tabindex="-1" aria-hidden="true">
+              <option value="players_desc">Most players</option>
+              <option value="popularity">Popular</option>
+              <option value="favorites">Favorites</option>
+            </select>
             <button class="button primary" type="submit"><img src="assets/icons/search.svg" alt=""><span>Search</span></button>
             <button class="icon-button bordered" id="refreshServers" type="button" title="Refresh servers"><img src="assets/icons/refresh-cw.svg" alt=""></button>
           </form>
@@ -318,7 +316,7 @@
             </label>
             <label class="setting-row toggle-row">
               <div><strong>Allow a different mod version</strong><small>Launch even when versions differ</small></div>
-              <input type="checkbox" id="settingAllowMismatch"><span class="toggle"></span>
+              <input type="checkbox" id="settingAllowMismatch" checked><span class="toggle"></span>
             </label>
             <label class="field-block">
               <span>Additional parameters</span>
@@ -350,7 +348,7 @@
           </div>
 
           <div class="settings-section">
-            <div class="settings-section-title"><h2>Preset behavior</h2><span>Workshop additions</span></div>
+            <div class="settings-section-title"><h2>Presets</h2><span>Workshop additions</span></div>
             <label class="field-block">
               <span>Default Workshop preset</span>
               <select id="settingDefaultPreset"></select>
@@ -373,7 +371,7 @@
             </label>
           </div>
 
-          <div class="settings-section">
+          <div class="settings-section mod-diagnostics-section">
             <div class="settings-section-title"><h2 id="modLogsSettingHeading">Mod diagnostics</h2><span id="modLogsSettingSubtitle">Review changes that can affect presets</span></div>
             <label class="setting-row toggle-row">
               <div><strong id="modLogsFooterSettingTitle">Show on bottom panel</strong><small id="modLogsFooterSettingHelp">Keep quick access to mod logs next to launch status</small></div>
@@ -425,28 +423,11 @@
         <div class="footer-status" id="footerStatus"><span class="status-dot"></span><span>Select a preset</span></div>
         <div class="launch-actions">
           <button class="download-missing-button" id="downloadMissingMods" title="Download missing mods"><img src="assets/icons/cloud-download.svg" alt=""><span>DOWNLOAD MODS</span></button>
-          <button class="play-button" id="launchGame"><img src="assets/icons/play.svg" alt=""><span>PLAY</span></button>
+          <button class="play-button" id="launchGame"><img src="assets/icons/play-filled.svg" alt=""><span>PLAY</span></button>
         </div>
       </footer>
     </main>
   </div>
-
-  <dialog class="wide-dialog home-manual-dialog" id="homeManualDialog">
-    <div class="dialog-header"><div><span data-home-i18n="home.manualKicker">LAUNCHER GUIDE</span><h2 data-home-i18n="home.manualTitle">How to get started</h2></div><button class="icon-button" type="button" data-dialog-close title="Close"><img src="assets/icons/x.svg" alt=""></button></div>
-    <div class="home-manual-body">
-      <p class="home-manual-intro" data-home-i18n="home.manualIntro">Follow these steps for a clean first launch.</p>
-      <ol class="home-manual-steps">
-        <li><span>01</span><div><strong data-home-i18n="home.manualStep1Title">Check the game path</strong><p data-home-i18n="home.manualStep1Text">Open Settings and make sure Arma Reforger is detected.</p></div></li>
-        <li><span>02</span><div><strong data-home-i18n="home.manualStep2Title">Choose your mods</strong><p data-home-i18n="home.manualStep2Text">Use Workshop to find content, then add it to a preset.</p></div></li>
-        <li><span>03</span><div><strong data-home-i18n="home.manualStep3Title">Prepare the preset</strong><p data-home-i18n="home.manualStep3Text">Download missing mods and resolve version warnings before a normal launch.</p></div></li>
-        <li><span>04</span><div><strong data-home-i18n="home.manualStep4Title">Join a server</strong><p data-home-i18n="home.manualStep4Text">Choose a server and connect. Arma Reforger downloads missing server mods after it starts.</p></div></li>
-      </ol>
-    </div>
-    <div class="dialog-actions spread-actions">
-      <button class="button secondary" type="button" data-home-view="settings"><img src="assets/icons/settings.svg" alt=""><span data-home-i18n="home.manualSettings">Open Settings</span></button>
-      <div class="button-row"><button class="button quiet" type="button" data-dialog-close><span data-home-i18n="common.close">Close</span></button><button class="button primary" type="button" data-home-view="workshop"><img src="assets/icons/store.svg" alt=""><span data-home-i18n="home.openWorkshop">Open Workshop</span></button></div>
-    </div>
-  </dialog>
 
   <dialog class="wide-dialog about-dialog" id="aboutDialog" aria-labelledby="aboutDialogTitle">
     <div class="dialog-header">
@@ -565,14 +546,20 @@
   <dialog id="modLogsDialog" class="mod-logs-dialog">
     <div class="dialog-header" id="modLogsDragHandle">
       <div><span id="modLogsEyebrow">MOD ACTIVITY</span><h2 id="modLogsTitle">Mod logs</h2></div>
-      <button class="icon-button" id="closeModLogsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+      <div class="mod-logs-window-actions">
+        <button class="icon-button bordered" id="popoutModLogs" type="button" title="Open in separate window" aria-label="Open in separate window"><img src="assets/icons/external-link.svg" alt=""></button>
+        <button class="icon-button" id="closeModLogsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+      </div>
     </div>
     <div class="mod-logs-toolbar">
       <label class="search-field">
         <img src="assets/icons/search.svg" alt="">
         <input id="modLogsSearch" type="search" placeholder="Search" autocomplete="off">
       </label>
-      <select id="modLogsFilter" aria-label="Filter mod logs"></select>
+      <div class="mod-logs-filter-field">
+        <select id="modLogsFilter" aria-label="Filter mod logs" hidden tabindex="-1"></select>
+        <div class="styled-select" data-select-for="modLogsFilter"></div>
+      </div>
     </div>
     <div class="mod-logs-table-scroll">
       <div class="mod-log-head">
@@ -746,6 +733,7 @@
 
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
   <script src="i18n.js"></script>
+  <script src="styledSelect.js"></script>
   <script src="confirmationDialog.js"></script>
   <script src="../shared/serverAvailability.js"></script>
   <script src="app.js"></script>

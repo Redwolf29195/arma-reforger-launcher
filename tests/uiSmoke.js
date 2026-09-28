@@ -29,6 +29,7 @@ app.whenReady().then(async () => {
   let backgroundScanRequests = 0;
   let settingsSaveRequests = 0;
   let officialReleaseOpenRequests = 0;
+  let guideVideoOpenRequests = 0;
   let resumeDownloadRequests = 0;
   let failDownloadStatusOnce = false;
   const modActionRequests = [];
@@ -203,6 +204,10 @@ app.whenReady().then(async () => {
     officialReleaseOpenRequests += 1;
     return true;
   });
+  ipcMain.handle('system:open-guide-video', () => {
+    guideVideoOpenRequests += 1;
+    return true;
+  });
   ipcMain.handle('launcher:license', () => {
     licenseReadRequests += 1;
     return 'GNU GENERAL PUBLIC LICENSE\n\nVersion 3, 29 June 2007';
@@ -241,8 +246,8 @@ app.whenReady().then(async () => {
       category: payload.category || '',
       sort: payload.sort || 'subscribers',
       page: payload.page || 1,
-      count: items.length,
-      pageSize: 16,
+      count: payload.category ? items.length : 50,
+      pageSize: 24,
       items
     };
   });
@@ -367,6 +372,7 @@ app.whenReady().then(async () => {
       homeModsMetric: document.querySelector('#homeModsMetric')?.textContent.trim() || '',
       homePresetsMetric: document.querySelector('#homePresetsMetric')?.textContent.trim() || '',
       homeGuideTitle: document.querySelector('.home-guide-card strong')?.textContent.trim() || '',
+      homeGuideButton: document.querySelector('#homeVideoOpen')?.textContent.trim() || '',
       homeDiscord: document.querySelector('#homeDiscordLink')?.href || '',
       homeWebsite: document.querySelector('#homeWebsiteLink')?.href || '',
       homeCredit: document.querySelector('.home-community-credit')?.textContent.trim() || '',
@@ -453,14 +459,11 @@ app.whenReady().then(async () => {
     await new Promise((resolve) => setTimeout(resolve, 40));
     aboutDialog.querySelector('[data-dialog-close]').click();
     authenticity.closed = !aboutDialog.open;
-    document.querySelector('#homeManualOpen').click();
-    const homeManual = {
-      open: document.querySelector('#homeManualDialog').open,
-      title: document.querySelector('#homeManualDialog h2').textContent.trim(),
-      steps: document.querySelectorAll('.home-manual-steps li').length
+    document.querySelector('#homeVideoOpen').click();
+    const homeVideo = {
+      label: document.querySelector('#homeVideoOpen').textContent.trim(),
+      oldManualRemoved: !document.querySelector('#homeManualDialog')
     };
-    document.querySelector('#homeManualDialog [data-dialog-close]').click();
-    homeManual.closed = !document.querySelector('#homeManualDialog').open;
     document.querySelector('.home-tool-card[data-home-view="mods"]').click();
     const homeNavigation = document.querySelector('.view.active')?.id || '';
     document.querySelector('.nav-item[data-view="dashboard"]').click();
@@ -594,9 +597,22 @@ app.whenReady().then(async () => {
     dependencyCascade.manualButtonHiddenAfterRestore = document.querySelector('#addDependencies').hidden;
     document.querySelector('[data-view="workshop"]').click();
     await new Promise((resolve) => setTimeout(resolve, 100));
+    const workshopPagination = {
+      pages: [...document.querySelectorAll('#workshopPageNumbers [data-workshop-page]')]
+        .map((button) => Number(button.dataset.workshopPage))
+    };
+    document.querySelector('#workshopPageNumbers [data-workshop-page="2"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    workshopPagination.secondPage = document.querySelector('#workshopPageLabel').textContent.trim();
+    workshopPagination.secondActive = document.querySelector('#workshopPageNumbers [aria-current="page"]')?.dataset.workshopPage;
+    document.querySelector('#workshopPageNumbers [data-workshop-page="1"]').click();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    workshopPagination.returnedToFirst = document.querySelector('#workshopPageLabel').textContent.trim();
     const workshopAddButton = document.querySelector('.workshop-card[data-mod-id="7B4C0E19A6D34F82"] .workshop-add');
     const workshop = {
       activeView: document.querySelector('.view.active')?.id || '',
+      pagination: workshopPagination,
+      columns: getComputedStyle(document.querySelector('#workshopGrid')).gridTemplateColumns.split(' ').length,
       cards: document.querySelectorAll('.workshop-card').length,
       firstTitle: document.querySelector('.workshop-card-title strong')?.textContent.trim() || '',
       page: document.querySelector('#workshopPageLabel')?.textContent.trim() || '',
@@ -667,7 +683,7 @@ app.whenReady().then(async () => {
       homeToolsTitle: document.querySelector('.home-section-heading h2').textContent.trim(),
       homeWelcomeTitle: document.querySelector('.home-hero-copy h2').textContent.trim(),
       homeGuideTitle: document.querySelector('.home-guide-card strong').textContent.trim(),
-      homeManualTitle: document.querySelector('#homeManualDialog h2').textContent.trim(),
+      homeGuideButton: document.querySelector('#homeVideoOpen').textContent.trim(),
       homeCredit: document.querySelector('.home-community-credit').textContent.trim(),
       discordTitle: document.querySelector('#homeDiscordLink').title,
       websiteTitle: document.querySelector('#homeWebsiteLink').title,
@@ -836,7 +852,7 @@ app.whenReady().then(async () => {
       footerLogs,
       modLogs,
       deletionWarning,
-      homeManual,
+      homeVideo,
       homeNavigation,
       presetActionOrder: [...document.querySelectorAll('.details-actions button')]
         .slice(0, 4)
@@ -878,6 +894,7 @@ app.whenReady().then(async () => {
 
   result.authenticity.officialReleaseOpenRequests = officialReleaseOpenRequests;
   result.authenticity.licenseReadRequests = licenseReadRequests;
+  result.homeVideo.openRequests = guideVideoOpenRequests;
 
   window.webContents.send('updates:status', { state: 'available', info: { version: '0.3.6' } });
   const titlebarAvailable = await window.webContents.executeJavaScript(`(async () => {
@@ -1202,18 +1219,23 @@ app.whenReady().then(async () => {
     || result.englishInitial.homeWebsite !== 'https://armalaucher.com/'
     || result.englishInitial.homeCredit !== 'Official ALGZ distribution'
     || result.homeNavigation !== 'view-mods'
-    || !result.homeManual.open || !result.homeManual.closed || result.homeManual.steps !== 4
-    || result.homeManual.title !== 'How to get started'
+    || result.homeVideo.label !== 'Watch video' || !result.homeVideo.oldManualRemoved
+    || result.homeVideo.openRequests !== 1 || result.englishInitial.homeGuideButton !== 'Watch video'
     || result.russian.homeToolsTitle !== 'Возможности лаунчера'
     || result.russian.homeWelcomeTitle !== 'ДОБРО ПОЖАЛОВАТЬ В LAR LAUNCHER'
     || result.russian.homeGuideTitle !== 'Не знаете, с чего начать?'
-    || result.russian.homeManualTitle !== 'Как начать работу'
+    || result.russian.homeGuideButton !== 'Смотреть видео'
     || result.russian.homeCredit !== 'Официальная сборка ALGZ'
     || result.russian.discordTitle !== 'Открыть Discord ALGZ'
     || result.russian.websiteTitle !== 'Открыть сайт ALGZ') {
-    throw new Error(`Home dashboard is invalid: ${JSON.stringify({ en: result.englishInitial, manual: result.homeManual, navigation: result.homeNavigation, ru: result.russian })}`);
+    throw new Error(`Home dashboard is invalid: ${JSON.stringify({ en: result.englishInitial, video: result.homeVideo, navigation: result.homeNavigation, ru: result.russian })}`);
   }
   if (result.workshop.activeView !== 'view-workshop' || result.workshop.cards < 2
+    || result.workshop.columns !== 4
+    || result.workshop.pagination.pages.join(',') !== '1,2,3'
+    || result.workshop.pagination.secondPage !== 'Page 2 of 3'
+    || result.workshop.pagination.secondActive !== '2'
+    || result.workshop.pagination.returnedToFirst !== 'Page 1 of 3'
     || result.workshop.firstTitle !== 'ALGZ Admin API' || !result.workshop.addEnabled
     || !result.workshop.defaultBypassDialog || !result.workshop.defaultToast.includes('Training')
     || !result.workshop.defaultDisabled || result.workshop.askEveryTimeLabel !== 'Ask every time'

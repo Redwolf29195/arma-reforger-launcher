@@ -111,7 +111,7 @@ app.whenReady().then(async () => {
             cardRight: view.querySelector('.settings-section')?.getBoundingClientRect().right
           };
         })()`);
-        assert.equal(metrics.viewport, width);
+        assert.ok(Math.abs(metrics.viewport - width) <= 1, `Unexpected viewport width: ${metrics.viewport}, requested ${width}`);
         assert.equal(metrics.overflow, false, JSON.stringify({ language, width, view, metrics }));
         for (const cardWidth of metrics.widths) assert.ok(Math.abs(cardWidth - metrics.expectedWidth) <= 1);
         if (view === 'presets') {

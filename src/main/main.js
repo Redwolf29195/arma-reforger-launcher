@@ -14,6 +14,7 @@ const factoryResetStartup = packagedRuntimeSwitchBlocked
   : prepareFactoryResetStartup(app, process.argv.slice(1));
 const { acquireLauncherInstance } = require('./singleInstance');
 let mainWindow;
+let modLogsWindow;
 if (!acquireLauncherInstance({ app, getMainWindow: () => mainWindow, factoryResetStartup })) return;
 const { applyStableUpdateChannel, createLauncherUpdater } = require('./fastUpdater');
 const autoUpdater = createLauncherUpdater();
@@ -124,7 +125,9 @@ const installedModUpdater = createInstalledModUpdater({
   }
 });
 const FORCED_UPDATE_NOTICE_MS = 5_000;
+const GUIDE_VIDEO_URL = 'https://www.youtube.com/watch?v=aEcC8Af4KWE&t=29s';
 const TRUSTED_RENDERER_URL = pathToFileURL(path.join(__dirname, '..', 'renderer', 'index.html')).href;
+const TRUSTED_MOD_LOGS_URL = pathToFileURL(path.join(__dirname, '..', 'renderer', 'modLogsWindow.html')).href;
 const ALLOWED_EXTERNAL_HOSTS = new Set([
   'armalaucher.com',
   'discord.gg',
@@ -138,6 +141,11 @@ const ipcMain = createTrustedIpcRegistrar({
   getMainWindow: () => mainWindow,
   trustedRendererUrl: TRUSTED_RENDERER_URL,
   onRejected: (channel) => logger?.error(`Blocked untrusted IPC request for ${channel}`)
+});
+const modLogsWindowIpc = createTrustedIpcRegistrar({
+  ipcMain: electronIpcMain,
+  getMainWindow: () => modLogsWindow,
+  trustedRendererUrl: TRUSTED_MOD_LOGS_URL
 });
 
 const mainMessages = {
@@ -740,6 +748,78 @@ function createWindow() {
     if (isAllowedExternalUrl(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+  mainWindow.on('closed', () => {
+    modLogsWindow?.close();
+    mainWindow = null;
+  });
+}
+
+function openModLogsWindow() {
+  if (modLogsWindow && !modLogsWindow.isDestroyed()) {
+    modLogsWindow.show();
+    modLogsWindow.focus();
+    return;
+  }
+  modLogsWindow = new BrowserWindow({
+    width: 1060,
+    height: 720,
+    minWidth: 860,
+    minHeight: 420,
+    show: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#1d2224',
+    title: 'Mod logs — LAR Launcher',
+    icon: path.join(__dirname, '..', 'renderer', 'assets', 'app-icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'modLogsPreload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      webviewTag: false,
+      navigateOnDragDrop: false
+    }
+  });
+  installEditingShortcuts(modLogsWindow.webContents);
+  modLogsWindow.webContents.on('will-navigate', (event, url) => {
+    if (url !== TRUSTED_MOD_LOGS_URL) event.preventDefault();
+  });
+  modLogsWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
+  modLogsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  modLogsWindow.once('ready-to-show', () => modLogsWindow?.show());
+  modLogsWindow.on('closed', () => { modLogsWindow = null; });
+  modLogsWindow.loadFile(path.join(__dirname, '..', 'renderer', 'modLogsWindow.html'));
+}
+
+function notifyModLogsWindow() {
+  if (modLogsWindow && !modLogsWindow.isDestroyed()) {
+    modLogsWindow.webContents.send('mod-logs-window:changed');
+  }
+}
+
+function registerModLogsWindowHandlers() {
+  modLogsWindowIpc.handle('mod-logs-window:state', async () => ({
+    logs: await modLogStore.list(),
+    presets: await presetStore.list(),
+    language: settingsStore.get().language
+  }));
+  modLogsWindowIpc.handle('mod-logs-window:clear', async () => {
+    await modLogStore.clear();
+    notifyModLogsWindow();
+    mainWindow?.webContents.send('mod-logs:external-change');
+    return true;
+  });
+  modLogsWindowIpc.handle('mod-logs-window:remove-request', async (_event, logId) => {
+    if (!/^[0-9a-f-]{20,}$/i.test(String(logId || ''))) return false;
+    if (!(await modLogStore.list()).some((entry) => entry.id === logId)) return false;
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send('mod-logs:remove-request', logId);
+    return true;
+  });
+  modLogsWindowIpc.on('mod-logs-window:close', () => modLogsWindow?.close());
 }
 
 function registerWindowHandlers() {
@@ -783,9 +863,22 @@ function registerDataHandlers() {
   });
 
   ipcMain.handle('mod-logs:list', () => modLogStore.list());
-  ipcMain.handle('mod-logs:add', (_event, entry) => modLogStore.append(entry));
-  ipcMain.handle('mod-logs:add-many', (_event, entries) => modLogStore.appendMany(entries));
-  ipcMain.handle('mod-logs:clear', () => modLogStore.clear());
+  ipcMain.handle('mod-logs:add', async (_event, entry) => {
+    const saved = await modLogStore.append(entry);
+    notifyModLogsWindow();
+    return saved;
+  });
+  ipcMain.handle('mod-logs:add-many', async (_event, entries) => {
+    const saved = await modLogStore.appendMany(entries);
+    notifyModLogsWindow();
+    return saved;
+  });
+  ipcMain.handle('mod-logs:clear', async () => {
+    const result = await modLogStore.clear();
+    notifyModLogsWindow();
+    return result;
+  });
+  ipcMain.handle('mod-logs:open-window', () => { openModLogsWindow(); return true; });
 
   ipcMain.handle('mods:scan', scanInstalledMods);
   ipcMain.handle('mods:details', async (_event, modId) => {
@@ -1529,6 +1622,11 @@ function registerSystemHandlers() {
     return true;
   });
 
+  ipcMain.handle('system:open-guide-video', async () => {
+    await shell.openExternal(GUIDE_VIDEO_URL);
+    return true;
+  });
+
   ipcMain.handle('system:open-workshop', async (_event, modId) => {
     const normalizedId = String(modId || '').toUpperCase();
     if (!/^[0-9A-F]{16}$/.test(normalizedId)) throw new Error(mainT('invalidModGuid'));
@@ -1656,6 +1754,7 @@ app.whenReady().then(async () => {
   syncUpdatePushSubscription();
   registerWindowHandlers();
   registerDataHandlers();
+  registerModLogsWindowHandlers();
   registerServerHandlers();
   registerSettingsHandlers();
   registerGameHandlers();

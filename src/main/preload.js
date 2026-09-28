@@ -26,9 +26,20 @@ contextBridge.exposeInMainWorld('reforgerLauncher', {
   },
   deleteMod: (modId) => ipcRenderer.invoke('mods:delete', modId),
   listModLogs: () => ipcRenderer.invoke('mod-logs:list'),
+  openModLogsWindow: () => ipcRenderer.invoke('mod-logs:open-window'),
   recordModLog: (entry) => ipcRenderer.invoke('mod-logs:add', entry),
   recordModLogs: (entries) => ipcRenderer.invoke('mod-logs:add-many', entries),
   clearModLogs: () => ipcRenderer.invoke('mod-logs:clear'),
+  onModLogsExternalChange: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('mod-logs:external-change', listener);
+    return () => ipcRenderer.removeListener('mod-logs:external-change', listener);
+  },
+  onModLogRemoveRequest: (callback) => {
+    const listener = (_event, logId) => callback(logId);
+    ipcRenderer.on('mod-logs:remove-request', listener);
+    return () => ipcRenderer.removeListener('mod-logs:remove-request', listener);
+  },
   saveWorkspace: (workspace) => ipcRenderer.invoke('workspace:save', workspace),
   importPreset: () => ipcRenderer.invoke('presets:import'),
   importPresetText: (payload) => ipcRenderer.invoke('presets:import-text', payload),
@@ -53,6 +64,7 @@ contextBridge.exposeInMainWorld('reforgerLauncher', {
   resumeModDownload: () => ipcRenderer.invoke('game:resume-download'),
   openWorkshop: (modId) => ipcRenderer.invoke('system:open-workshop', modId),
   openOfficialReleases: () => ipcRenderer.invoke('system:open-official-releases'),
+  openGuideVideo: () => ipcRenderer.invoke('system:open-guide-video'),
   getLicenseText: () => ipcRenderer.invoke('launcher:license'),
   openUserData: () => ipcRenderer.invoke('system:open-user-data'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),

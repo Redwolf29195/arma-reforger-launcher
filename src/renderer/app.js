@@ -8,6 +8,8 @@ const {
   localizeError
 } = window.launcherI18n;
 
+const WORKSHOP_PAGE_SIZE = 24;
+
 const state = {
   appVersion: '0.1.0',
   platform: '',
@@ -30,7 +32,7 @@ const state = {
   workshopSort: 'subscribers',
   workshopPage: 1,
   workshopCount: 0,
-  workshopPageSize: 16,
+  workshopPageSize: WORKSHOP_PAGE_SIZE,
   workshopItems: [],
   workshopLoaded: false,
   workshopLoading: false,
@@ -794,6 +796,14 @@ function setView(view, options = {}) {
   });
   $('#pageEyebrow').textContent = t(viewMetadata[view][0]);
   $('#pageTitle').textContent = t(viewMetadata[view][1]);
+  if (changed && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+    for (const heading of [$('#pageEyebrow'), $('#pageTitle')]) {
+      heading.animate?.([
+        { opacity: .45, transform: 'translate3d(0, 5px, 0)' },
+        { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+      ], { duration: 240, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+    }
+  }
   if (changed && options.render !== false) renderView(view);
   renderHeaderActions();
   if (view === 'workshop' && !state.workshopLoaded && !state.workshopLoading) {
@@ -1142,7 +1152,7 @@ async function searchFavoriteWorkshop() {
     const tags = new Set((mod.tags || []).map((tag) => String(tag || '').toUpperCase()));
     return matchesQuery && (!category || tags.has(category));
   });
-  const pageSize = 16;
+  const pageSize = WORKSHOP_PAGE_SIZE;
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const page = Math.min(Math.max(1, state.workshopPage), pages);
   const start = (page - 1) * pageSize;
@@ -1183,14 +1193,39 @@ function storeWorkshopCardGallery(mod, details) {
 
 function updateWorkshopCardGallery(modId) {
   const gallery = workshopCardGalleries.get(modId);
-  const card = $(`#workshopGrid .workshop-card[data-mod-id="${modId}"]`);
+  const card = $$('#workshopGrid .workshop-card').find((item) => item.dataset.modId === modId);
   if (!gallery || !card) return;
-  const image = card.querySelector('.workshop-preview-image');
+  let image = card.querySelector('.workshop-preview-image');
   const url = gallery.images[gallery.index] || '';
-  if (image && url) image.src = url;
+  if (url && !image) {
+    const placeholder = card.querySelector('.workshop-preview > span');
+    if (placeholder) {
+      image = document.createElement('img');
+      image.className = 'workshop-preview-image';
+      image.alt = card.querySelector('.workshop-card-title strong')?.textContent || '';
+      image.loading = 'lazy';
+      image.referrerPolicy = 'no-referrer';
+      placeholder.replaceWith(image);
+    }
+  }
+  if (image && url && image.getAttribute('src') !== url) image.src = url;
   card.querySelectorAll('.workshop-gallery-arrow').forEach((button) => {
     button.hidden = gallery.images.length < 2;
   });
+}
+
+function updateWorkshopCardScenarios(mod) {
+  const card = $$('#workshopGrid .workshop-card').find((item) => item.dataset.modId === mod.modId);
+  const previous = card?.querySelector('.workshop-scenarios');
+  if (!previous) return;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = renderWorkshopScenarioBlock(mod);
+  const next = wrapper.firstElementChild;
+  if (next) {
+    next.classList.add('scenario-revealed');
+    previous.replaceWith(next);
+  }
+  updateWorkshopCardGallery(mod.modId);
 }
 
 async function loadWorkshopCardGallery(mod) {
@@ -1265,10 +1300,32 @@ function renderWorkshopCards(items) {
   }).join('');
 }
 
+function renderWorkshopPageNumbers() {
+  const pages = workshopPageCount();
+  const current = Math.min(state.workshopPage, pages);
+  const first = Math.max(1, Math.min(current - 2, pages - 4));
+  const last = Math.min(pages, first + 4);
+  const pageButton = (page) => `<button class="workshop-page-number ${page === current ? 'active' : ''}" type="button" data-workshop-page="${page}" aria-label="${escapeHtml(t('workshop.pageNumber', { page }))}" ${page === current ? 'aria-current="page"' : ''} ${state.workshopLoading ? 'disabled' : ''}>${page}</button>`;
+  const gap = '<span class="workshop-page-gap" aria-hidden="true">…</span>';
+  const numbers = [];
+  if (first > 1) {
+    numbers.push(pageButton(1));
+    if (first > 2) numbers.push(gap);
+  }
+  for (let page = first; page <= last; page += 1) numbers.push(pageButton(page));
+  if (last < pages) {
+    if (last < pages - 1) numbers.push(gap);
+    numbers.push(pageButton(pages));
+  }
+  $('#workshopPageNumbers').setAttribute('aria-label', t('workshop.pages'));
+  $('#workshopPageNumbers').innerHTML = numbers.join('');
+}
+
 function renderWorkshop() {
   const grid = $('#workshopGrid');
   if (!grid) return;
   $('#workshopSort').value = state.workshopSort;
+  globalThis.launcherStyledSelect?.sync('workshopSort');
   $$('#configuratorCategories [data-category]').forEach((button) => {
     button.classList.toggle('active', button.dataset.category === state.workshopCategory);
     button.setAttribute('aria-pressed', String(button.dataset.category === state.workshopCategory));
@@ -1291,6 +1348,7 @@ function renderWorkshop() {
   });
   $('#workshopPrevious').disabled = state.workshopLoading || state.workshopPage <= 1;
   $('#workshopNext').disabled = state.workshopLoading || state.workshopPage >= workshopPageCount();
+  renderWorkshopPageNumbers();
 
   if (state.workshopLoading) {
     grid.innerHTML = `<div class="workshop-message"><span class="details-loader" aria-hidden="true"></span><strong>${escapeHtml(t('workshop.loading'))}</strong></div>`;
@@ -1331,7 +1389,7 @@ async function loadWorkshop(options = {}) {
     ));
     for (const item of state.workshopItems) favoriteWorkshopItemsCache.set(item.modId, item);
     state.workshopCount = result.count || 0;
-    state.workshopPageSize = result.pageSize || 16;
+    state.workshopPageSize = result.pageSize || WORKSHOP_PAGE_SIZE;
     state.workshopPage = result.page || state.workshopPage;
     state.workshopLoaded = true;
   } catch (error) {
@@ -1358,7 +1416,7 @@ async function hydrateWorkshopScenarios(requestId, items) {
       } catch {
         mod.scenarios = [];
       }
-      if (requestId === workshopScenarioRequest && state.workshopItems.includes(mod)) renderWorkshop();
+      if (requestId === workshopScenarioRequest && state.workshopItems.includes(mod)) updateWorkshopCardScenarios(mod);
     }
   };
   await Promise.all(Array.from({ length: Math.min(4, queue.length) }, worker));
@@ -2832,6 +2890,8 @@ function renderModLogs() {
   $('#modLogsResizeHandle').title = t('modLogs.resizePanel');
   $('#modLogsResizeHandle').setAttribute('aria-label', t('modLogs.resizePanel'));
   $('#closeModLogsTop').title = t('common.close');
+  $('#popoutModLogs').title = t('modLogs.openWindow');
+  $('#popoutModLogs').setAttribute('aria-label', t('modLogs.openWindow'));
   $('#modLogsSearch').placeholder = t('modLogs.search');
   $('#modLogsSearch').value = state.modLogSearch;
   $('#modLogHeadTime').textContent = t('modLogs.head.time');
@@ -2848,6 +2908,7 @@ function renderModLogs() {
     `<option value="${filter}">${escapeHtml(t(`modLogs.filter.${filter}`))}</option>`
   )).join('');
   $('#modLogsFilter').value = state.modLogFilter;
+  globalThis.launcherStyledSelect?.sync('modLogsFilter');
 
   const search = state.modLogSearch.toLocaleLowerCase(locale());
   const visible = state.modLogs.filter((entry) => {
@@ -2900,6 +2961,15 @@ async function openModLogs() {
     state.modLogsLoading = false;
     renderModLogSetting();
     renderModLogs();
+  }
+}
+
+async function popoutModLogs() {
+  try {
+    await api.openModLogsWindow();
+    $('#modLogsDialog').close();
+  } catch (error) {
+    showToast(errorMessage(error), 'error');
   }
 }
 
@@ -3750,6 +3820,8 @@ async function changeLanguage(nextLanguage) {
   const normalized = nextLanguage === 'ru' ? 'ru' : 'en';
   if (state.language === normalized) return;
   state.language = setLanguage(normalized);
+  globalThis.launcherStyledSelect?.sync('workshopSort');
+  globalThis.launcherStyledSelect?.sync('modLogsFilter');
   state.settings.language = state.language;
   setTitlebarStatus(state.busy ? t('busy.processing') : t('common.ready'));
   renderAll();
@@ -4138,6 +4210,23 @@ async function repairLauncher() {
 }
 
 function bindEvents() {
+  globalThis.launcherStyledSelect?.mount('workshopSort');
+  globalThis.launcherStyledSelect?.mount('modLogsFilter');
+  api.onModLogsExternalChange?.(async () => {
+    try {
+      state.modLogs = await api.listModLogs();
+      state.modLogCount = state.modLogs.length;
+      state.modLogsLoaded = true;
+      renderModLogSetting();
+      if ($('#modLogsDialog').open) renderModLogs();
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+    }
+  });
+  api.onModLogRemoveRequest?.(async (logId) => {
+    await openModLogs();
+    await removeLoggedModFromPreset(logId);
+  });
   $$('[data-language]').forEach((button) => {
     button.addEventListener('click', () => changeLanguage(button.dataset.language));
   });
@@ -4153,9 +4242,8 @@ function bindEvents() {
     if (dialog?.open) dialog.close();
     setView(button.dataset.homeView);
   }));
-  $('#homeManualOpen').addEventListener('click', () => {
-    const dialog = $('#homeManualDialog');
-    if (!dialog.open) dialog.showModal();
+  $('#homeVideoOpen').addEventListener('click', () => {
+    api.openGuideVideo().catch((error) => showToast(errorMessage(error), 'error'));
   });
   $('#openAboutSidebar').addEventListener('click', openAboutDialog);
   $('#openAboutSettings').addEventListener('click', openAboutDialog);
@@ -4215,15 +4303,17 @@ function bindEvents() {
     loadWorkshop();
   });
   $('#refreshWorkshop').addEventListener('click', () => loadWorkshop({ refresh: true }));
-  $('#workshopPrevious').addEventListener('click', () => {
-    if (state.workshopPage <= 1) return;
-    state.workshopPage -= 1;
+  const goToWorkshopPage = (page) => {
+    if (state.workshopLoading || !Number.isInteger(page) || page < 1 || page > workshopPageCount() || page === state.workshopPage) return;
+    state.workshopPage = page;
     loadWorkshop();
-  });
-  $('#workshopNext').addEventListener('click', () => {
-    if (state.workshopPage >= workshopPageCount()) return;
-    state.workshopPage += 1;
-    loadWorkshop();
+    $('#workshopSummary').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  $('#workshopPrevious').addEventListener('click', () => goToWorkshopPage(state.workshopPage - 1));
+  $('#workshopNext').addEventListener('click', () => goToWorkshopPage(state.workshopPage + 1));
+  $('#workshopPageNumbers').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-workshop-page]');
+    if (button) goToWorkshopPage(Number(button.dataset.workshopPage));
   });
   $('#workshopGrid').addEventListener('click', (event) => {
     handleWorkshopGridAction(event, state.workshopItems);
@@ -4632,6 +4722,7 @@ function bindEvents() {
   $('#saveParameters').addEventListener('click', () => saveSettings(true));
   $('#openModLogs').addEventListener('click', openModLogs);
   $('#footerModLogs').addEventListener('click', openModLogs);
+  $('#popoutModLogs').addEventListener('click', popoutModLogs);
   $('#closeModLogsTop').addEventListener('click', () => $('#modLogsDialog').close());
   $('#closeModLogs').addEventListener('click', () => $('#modLogsDialog').close());
   $('#clearModLogs').addEventListener('click', clearModLogs);
@@ -4704,6 +4795,8 @@ async function bootstrap() {
     state.buildIdentity = data.buildIdentity || null;
     state.settings = data.settings;
     state.language = setLanguage(data.settings.language || 'en');
+    globalThis.launcherStyledSelect?.sync('workshopSort');
+    globalThis.launcherStyledSelect?.sync('modLogsFilter');
     state.presets = data.presets;
     state.installedMods = data.installedMods;
     state.modLogCount = Number(data.modLogCount || 0);

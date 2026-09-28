@@ -5,6 +5,9 @@ const CACHE_TTL_MS = 20 * 60 * 1000;
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15 * 1000;
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
+const WORKSHOP_SOURCE_PAGE_SIZE = 16;
+const WORKSHOP_PAGE_SIZE = 24;
+const MAX_WORKSHOP_SOURCE_PAGE = 5000;
 const WORKSHOP_CATEGORY_TAGS = new Set([
   'WEAPONS',
   'VEHICLES',
@@ -22,6 +25,7 @@ const WORKSHOP_CATEGORY_TAGS = new Set([
 
 const detailsCache = new Map();
 const searchCache = new Map();
+const sourceSearchCache = new Map();
 
 function nonNegativeNumber(value) {
   const number = Number(value);
@@ -99,7 +103,7 @@ function normalizeWorkshopSearch(pageData, request) {
     sort: request.sort,
     page: Math.max(1, nonNegativeNumber(pageProps?.page || request.page)),
     count: nonNegativeNumber(assets?.count),
-    pageSize: rows.length || 16,
+    pageSize: WORKSHOP_SOURCE_PAGE_SIZE,
     items: rows.map(normalizeSearchItem).filter(Boolean)
   };
 }
@@ -255,25 +259,59 @@ async function fetchWorkshopDetails(modId, options = {}) {
   return value;
 }
 
+async function fetchWorkshopSourcePage(request, page, options, now, refresh) {
+  const key = JSON.stringify({ ...request, page });
+  const cached = sourceSearchCache.get(key);
+  if (!refresh && cached && cached.expiresAt > now) return cached.value;
+  const url = new URL('/workshop', WORKSHOP_ORIGIN);
+  if (request.query) url.searchParams.set('search', request.query);
+  if (request.category) url.searchParams.set('tags', request.category);
+  url.searchParams.set('page', String(page));
+  url.searchParams.set('sort', request.sort);
+  const html = await fetchWorkshopPage(url.href, options, 'Не удалось выполнить поиск в Workshop.');
+  const result = normalizeWorkshopSearch(extractNextData(html), { ...request, page });
+  sourceSearchCache.set(key, {
+    value: result,
+    expiresAt: now + (options.cacheTtlMs || SEARCH_CACHE_TTL_MS)
+  });
+  return result;
+}
+
 async function fetchWorkshopSearch(value = {}, options = {}) {
   const query = String(value.query || '').trim().slice(0, 120);
-  const page = Math.max(1, Math.min(500, Number.parseInt(value.page, 10) || 1));
+  const maximumPage = Math.ceil(MAX_WORKSHOP_SOURCE_PAGE * WORKSHOP_SOURCE_PAGE_SIZE / WORKSHOP_PAGE_SIZE);
+  const page = Math.max(1, Math.min(maximumPage, Number.parseInt(value.page, 10) || 1));
   const sort = ['subscribers', 'newest', 'rating'].includes(value.sort) ? value.sort : 'subscribers';
   const requestedCategory = String(value.category || '').trim().toUpperCase();
   const category = WORKSHOP_CATEGORY_TAGS.has(requestedCategory) ? requestedCategory : '';
-  const request = { query, category, page, sort };
-  const key = JSON.stringify(request);
+  const request = { query, category, sort };
+  const key = JSON.stringify({ ...request, page });
   const now = options.now?.() ?? Date.now();
   const cached = searchCache.get(key);
   if (!value.refresh && cached && cached.expiresAt > now) return cached.value;
 
-  const url = new URL('/workshop', WORKSHOP_ORIGIN);
-  if (query) url.searchParams.set('search', query);
-  if (category) url.searchParams.set('tags', category);
-  url.searchParams.set('page', String(page));
-  url.searchParams.set('sort', sort);
-  const html = await fetchWorkshopPage(url.href, options, 'Не удалось выполнить поиск в Workshop.');
-  const result = normalizeWorkshopSearch(extractNextData(html), request);
+  const start = (page - 1) * WORKSHOP_PAGE_SIZE;
+  const firstSourcePage = Math.floor(start / WORKSHOP_SOURCE_PAGE_SIZE) + 1;
+  const first = await fetchWorkshopSourcePage(request, firstSourcePage, options, now, value.refresh);
+  const count = Math.min(first.count, MAX_WORKSHOP_SOURCE_PAGE * WORKSHOP_SOURCE_PAGE_SIZE);
+  const lastSourcePage = Math.min(
+    MAX_WORKSHOP_SOURCE_PAGE,
+    Math.floor((Math.min(start + WORKSHOP_PAGE_SIZE, count) - 1) / WORKSHOP_SOURCE_PAGE_SIZE) + 1
+  );
+  const following = await Promise.all(Array.from(
+    { length: Math.max(0, lastSourcePage - firstSourcePage) },
+    (_, index) => fetchWorkshopSourcePage(request, firstSourcePage + index + 1, options, now, value.refresh)
+  ));
+  const offset = start - (firstSourcePage - 1) * WORKSHOP_SOURCE_PAGE_SIZE;
+  const result = {
+    query,
+    category,
+    sort,
+    page,
+    count,
+    pageSize: WORKSHOP_PAGE_SIZE,
+    items: [first, ...following].flatMap((source) => source.items).slice(offset, offset + WORKSHOP_PAGE_SIZE)
+  };
   searchCache.set(key, {
     value: result,
     expiresAt: now + (options.cacheTtlMs || SEARCH_CACHE_TTL_MS)
@@ -284,6 +322,7 @@ async function fetchWorkshopSearch(value = {}, options = {}) {
 function clearWorkshopDetailsCache() {
   detailsCache.clear();
   searchCache.clear();
+  sourceSearchCache.clear();
 }
 
 module.exports = {
