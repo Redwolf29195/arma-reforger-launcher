@@ -72,6 +72,9 @@ const state = {
 let workspaceSaveChain = Promise.resolve();
 let presetSaveChain = Promise.resolve();
 let modDetailsRequest = 0;
+const modDetailsCache = new Map();
+const MOD_DETAILS_CACHE_TTL_MS = 60_000;
+const MOD_DETAILS_TIMEOUT_MS = 18_000;
 let workshopScenarioRequest = 0;
 let serverListRequest = 0;
 let serverDetailsRequest = 0;
@@ -82,6 +85,7 @@ let automaticModScanPromise = null;
 let foregroundRefreshTimer = 0;
 let mandatoryUpdateCountdownTimer = 0;
 let acknowledgedMandatoryUpdate = '';
+let updateStatusRevision = -1;
 let serverSearchTimer = 0;
 let serverSearchComposing = false;
 let serverAutoRefreshTimer = 0;
@@ -159,7 +163,8 @@ const viewMetadata = {
   servers: ['view.servers.eyebrow', 'view.servers.title'],
   presets: ['view.presets.eyebrow', 'view.presets.title'],
   parameters: ['view.parameters.eyebrow', 'view.parameters.title'],
-  settings: ['view.settings.eyebrow', 'view.settings.title']
+  settings: ['view.settings.eyebrow', 'view.settings.title'],
+  partners: ['view.partners.eyebrow', 'view.partners.title']
 };
 
 const workshopCategoryKeys = {
@@ -782,12 +787,14 @@ function renderView(view) {
   else if (view === 'presets') renderPresets();
   else if (view === 'parameters' || view === 'settings') renderSettings();
   else if (view === 'dashboard') renderLaunchState();
+  else if (view === 'partners') window.launcherPartners.render();
 }
 
 function setView(view, options = {}) {
   if (!viewMetadata[view]) return;
   const changed = state.currentView !== view;
   state.currentView = view;
+  $('.page-header').classList.toggle('partners-page-header', view === 'partners');
   $$('.nav-item').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
   $$('.view').forEach((section) => {
     const active = section.id === `view-${view}`;
@@ -795,7 +802,18 @@ function setView(view, options = {}) {
     section.classList.toggle('view-entering', changed && active);
   });
   $('#pageEyebrow').textContent = t(viewMetadata[view][0]);
-  $('#pageTitle').textContent = t(viewMetadata[view][1]);
+  const title = t(viewMetadata[view][1]);
+  const brandText = 'LAR Launcher';
+  const brandPosition = view === 'partners' ? title.indexOf(brandText) : -1;
+  const titleElement = $('#pageTitle');
+  if (brandPosition < 0) {
+    titleElement.textContent = title;
+  } else {
+    const brand = document.createElement('span');
+    brand.className = 'partners-title-brand';
+    brand.textContent = brandText;
+    titleElement.replaceChildren(title.slice(0, brandPosition), brand, title.slice(brandPosition + brandText.length));
+  }
   if (changed && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
     for (const heading of [$('#pageEyebrow'), $('#pageTitle')]) {
       heading.animate?.([
@@ -829,6 +847,13 @@ function renderHeaderActions() {
       <button class="button secondary" data-header-action="share-file"><img src="assets/icons/send.svg" alt="">${t('header.friendFile')}</button>
       <button class="button primary" data-header-action="save"><img src="assets/icons/save.svg" alt="">${t(state.activePreset ? 'header.renamePreset' : 'header.savePreset')}</button>`;
 
+  } else if (state.currentView === 'partners') {
+    const invitation = document.createElement('button');
+    invitation.type = 'button';
+    invitation.className = 'button primary partners-invitation';
+    invitation.dataset.headerAction = 'partner-discord';
+    invitation.textContent = t('partners.become');
+    container.replaceChildren(invitation);
   } else {
     container.innerHTML = '';
   }
@@ -1606,6 +1631,7 @@ function renderServers() {
   const list = $('#serverList');
   if (!list) return;
   $('#serverSort').value = state.serverSort;
+  globalThis.launcherStyledSelect?.sync('serverSort');
   $('#serverDirectLabel').textContent = t('servers.directLabel');
   $('#serverDirectHost').placeholder = t('servers.directHostPlaceholder');
   $('#serverDirectHost').setAttribute('aria-label', t('servers.directHostPlaceholder'));
@@ -2576,6 +2602,10 @@ function renderModDetails() {
 
   const local = localDetailsFor(detailsState.modId);
   const details = detailsState.data;
+  const refreshButton = $('#refreshModDetails');
+  refreshButton.disabled = detailsState.loading;
+  refreshButton.title = t('mods.detailsRefresh');
+  refreshButton.setAttribute('aria-label', t('mods.detailsRefresh'));
   $('#modDetailsSource').textContent = t('mods.detailsSource');
   $('#modDetailsTitle').textContent = details?.name || local.name;
   $('#downloadModDetails').dataset.modDownload = detailsState.modId;
@@ -2588,7 +2618,7 @@ function renderModDetails() {
   $('#closeModDetails span').textContent = t('common.close');
   $('#closeModDetailsTop').title = t('common.close');
 
-  if (detailsState.loading) {
+  if (detailsState.loading && !details) {
     $('#modDetailsBody').innerHTML = `
       <div class="mod-details-loading">
         <span class="details-loader" aria-hidden="true"></span>
@@ -2625,7 +2655,8 @@ function renderModDetails() {
     ? translatedDescription
     : originalDescription;
   const translationLoading = detailsState.translationLoading === true;
-  const rating = `${details.ratingPercent}% (${formatCount(details.ratingCount)})`;
+  const rating = Number.isFinite(details.ratingPercent)
+    ? `${details.ratingPercent}% (${formatCount(details.ratingCount)})` : '—';
   const dependencies = details.dependencies?.length
     ? renderDependencyCards(details.dependencies)
     : `<p class="mod-details-muted">${escapeHtml(t('mods.noDependencies'))}</p>`;
@@ -2650,6 +2681,7 @@ function renderModDetails() {
     : '';
 
   $('#modDetailsBody').innerHTML = `
+    ${detailsState.error ? `<div class="mod-details-message" role="status"><span>${escapeHtml(detailsState.error)}</span></div>` : ''}
     <div class="mod-details-intro">
       <div class="mod-details-gallery">
         ${hero ? `<div class="mod-details-hero-wrap"><button type="button" id="modDetailsHeroButton" class="mod-details-hero mod-details-hero-button" data-open-image="${escapeHtml(hero)}" title="${escapeHtml(t('viewer.open'))}" aria-label="${escapeHtml(t('viewer.open'))}">
@@ -2709,14 +2741,19 @@ function renderModDetails() {
     ${versions ? `<section class="mod-details-section"><h3>${escapeHtml(t('mods.versionsTitle'))}</h3><div class="mod-version-list">${versions}</div></section>` : ''}`;
 }
 
-async function openModDetails(modId) {
-  const normalizedId = String(modId || '').toUpperCase();
+async function openModDetails(modId, options = {}) {
+  const normalizedId = String(modId || '').trim().toUpperCase();
   if (!/^[0-9A-F]{16}$/.test(normalizedId)) return;
   const requestId = ++modDetailsRequest;
+  const cached = modDetailsCache.get(normalizedId);
+  const installedVersion = installedById().get(normalizedId)?.version || '';
+  const installedChanged = cached && cached.installedVersion !== installedVersion;
+  const fresh = cached && !installedChanged && !options.refresh
+    && Date.now() - cached.fetchedAt < MOD_DETAILS_CACHE_TTL_MS;
   state.modDetails = {
     modId: normalizedId,
-    loading: true,
-    data: null,
+    loading: !fresh,
+    data: cached?.data || null,
     error: '',
     descriptionMode: 'original',
     translatedDescription: '',
@@ -2725,10 +2762,17 @@ async function openModDetails(modId) {
   const dialog = $('#modDetailsDialog');
   if (!dialog.open) dialog.showModal();
   renderModDetails();
+  if (fresh) return;
 
   try {
-    const data = await api.getModDetails(normalizedId);
+    const data = await requestWithTimeout(api.getModDetails(normalizedId, {
+      refresh: Boolean(options.refresh || installedChanged)
+    }), MOD_DETAILS_TIMEOUT_MS, t('mods.detailsTimeout'));
     if (requestId !== modDetailsRequest) return;
+    if (String(data?.modId || '').toUpperCase() !== normalizedId) throw new Error(t('mods.detailsUnavailable'));
+    modDetailsCache.delete(normalizedId);
+    modDetailsCache.set(normalizedId, { data, fetchedAt: Date.now(), installedVersion });
+    while (modDetailsCache.size > 100) modDetailsCache.delete(modDetailsCache.keys().next().value);
     state.modDetails = {
       modId: normalizedId,
       loading: false,
@@ -2743,7 +2787,7 @@ async function openModDetails(modId) {
     state.modDetails = {
       modId: normalizedId,
       loading: false,
-      data: null,
+      data: cached?.data || null,
       error: errorMessage(error),
       descriptionMode: 'original',
       translatedDescription: '',
@@ -3821,6 +3865,7 @@ async function changeLanguage(nextLanguage) {
   if (state.language === normalized) return;
   state.language = setLanguage(normalized);
   globalThis.launcherStyledSelect?.sync('workshopSort');
+  globalThis.launcherStyledSelect?.sync('serverSort');
   globalThis.launcherStyledSelect?.sync('modLogsFilter');
   state.settings.language = state.language;
   setTitlebarStatus(state.busy ? t('busy.processing') : t('common.ready'));
@@ -4132,6 +4177,10 @@ function renderMandatoryUpdateDialog() {
 }
 
 function handleUpdateStatus(status) {
+  if (Number.isSafeInteger(status.revision)) {
+    if (status.revision < updateStatusRevision) return;
+    updateStatusRevision = status.revision;
+  }
   const previousState = state.updateStatus?.state;
   const previousMandatoryKey = mandatoryUpdateKey(state.updateStatus?.mandatory);
   const nextMandatoryKey = mandatoryUpdateKey(status.mandatory);
@@ -4145,10 +4194,12 @@ function handleUpdateStatus(status) {
 }
 
 async function checkUpdates(silent = false) {
+  let statusAtStart = state.updateStatus;
   try {
     // Startup checks must never read or persist controls from a hidden settings
     // page. Manual checks still save intentional edits made by the user.
     if (!silent) await saveSettings(false);
+    statusAtStart = state.updateStatus;
     const result = await api.checkForUpdates();
     if (result.state === 'development' && !silent) showToast(t('toast.updatePackagedOnly'), 'warning');
     else if (result.state === 'manual') {
@@ -4159,16 +4210,22 @@ async function checkUpdates(silent = false) {
       }
     }
     else if (result.state !== 'development') {
-      handleUpdateStatus({
-        state: result.state,
-        info: { version: result.version || '' },
-        message: result.message || ''
-      });
+      if (result.status) handleUpdateStatus(result.status);
+      else if (state.updateStatus === statusAtStart) {
+        handleUpdateStatus({ ...state.updateStatus,
+          state: result.state,
+          info: { version: result.version || '' },
+          message: result.message || ''
+        });
+      }
       if (result.state === 'error' && !silent) showToast(updateErrorMessage(result.message), 'error');
     }
   } catch (error) {
     const message = updateErrorMessage(error);
-    handleUpdateStatus({ state: 'error', message });
+    if (state.updateStatus === statusAtStart
+        && !['downloading', 'verifying', 'downloaded'].includes(statusAtStart?.state)) {
+      handleUpdateStatus({ state: 'error', message });
+    }
     if (!silent) showToast(message, 'error');
   }
 }
@@ -4210,7 +4267,9 @@ async function repairLauncher() {
 }
 
 function bindEvents() {
+  window.launcherPartners.mount();
   globalThis.launcherStyledSelect?.mount('workshopSort');
+  globalThis.launcherStyledSelect?.mount('serverSort');
   globalThis.launcherStyledSelect?.mount('modLogsFilter');
   api.onModLogsExternalChange?.(async () => {
     try {
@@ -4285,6 +4344,7 @@ function bindEvents() {
     if (action === 'import') openImportDialog();
     if (action === 'share-file') sharePresetFile();
     if (action === 'save') openPresetDialog();
+    if (action === 'partner-discord') $('#sidebarDiscordLink').click();
   });
 
   $('#modSearch').addEventListener('input', (event) => {
@@ -4533,6 +4593,14 @@ function bindEvents() {
     openModDetails(row.dataset.modId);
   });
   $('#closeModDetailsTop').addEventListener('click', closeModDetails);
+  $('#refreshModDetails').addEventListener('click', () => {
+    if (state.modDetails && !state.modDetails.loading) openModDetails(state.modDetails.modId, { refresh: true });
+  });
+  $('#modDetailsDialog').addEventListener('close', () => {
+    if ($('#modDetailsDialog').open) return;
+    modDetailsRequest += 1;
+    closeImageViewer();
+  });
   $('#closeModDetails').addEventListener('click', closeModDetails);
   $('#openModDetailsWorkshop').addEventListener('click', () => {
     if (!state.modDetails?.modId) return;
@@ -4792,10 +4860,12 @@ async function bootstrap() {
     state.platform = data.platform;
     state.packaged = data.packaged;
     state.updateMode = data.updateMode || (data.packaged ? 'manual' : 'development');
+    if (data.updateStatus) handleUpdateStatus(data.updateStatus);
     state.buildIdentity = data.buildIdentity || null;
     state.settings = data.settings;
     state.language = setLanguage(data.settings.language || 'en');
     globalThis.launcherStyledSelect?.sync('workshopSort');
+    globalThis.launcherStyledSelect?.sync('serverSort');
     globalThis.launcherStyledSelect?.sync('modLogsFilter');
     state.presets = data.presets;
     state.installedMods = data.installedMods;
@@ -4817,7 +4887,6 @@ async function bootstrap() {
   } finally {
     setBusy(false);
     renderAll();
-    if (state.packaged && state.updateMode === 'automatic') setTimeout(() => checkUpdates(true), 1500);
     if (activeModDownloadStates.has(state.modDownloadStatus?.state)) scheduleModDownloadPoll();
   }
 }

@@ -18,6 +18,7 @@ let modLogsWindow;
 if (!acquireLauncherInstance({ app, getMainWindow: () => mainWindow, factoryResetStartup })) return;
 const { applyStableUpdateChannel, createLauncherUpdater } = require('./fastUpdater');
 const autoUpdater = createLauncherUpdater();
+const { createUpdateCheckScheduler } = require('./updateCheckScheduler');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
@@ -81,6 +82,8 @@ let modLogStore;
 let logger;
 let installedMods = [];
 let updaterState = 'idle';
+let latestUpdateStatus = { state: 'idle', revision: 0 };
+let updateCheckScheduler = null;
 let updateCheckPromise = null;
 let availableUpdateInfo = null;
 let availableUpdatePolicy = null;
@@ -294,7 +297,8 @@ function safeUpdateErrorMessage(error) {
 
 function publishUpdateStatus(status) {
   updaterState = status.state;
-  sendUpdateStatus(status);
+  latestUpdateStatus = { ...status, revision: latestUpdateStatus.revision + 1 };
+  sendUpdateStatus(latestUpdateStatus);
 }
 
 function sendUpdateStatus(status) {
@@ -854,6 +858,7 @@ function registerDataHandlers() {
       platform: process.platform,
       buildIdentity: publicBuildIdentity(),
       updateMode: updateTrustPolicy.enabled ? 'automatic' : app.isPackaged ? 'manual' : 'development',
+      updateStatus: latestUpdateStatus,
       settings: settingsStore.get(),
       presets,
       installedMods: mods,
@@ -881,9 +886,9 @@ function registerDataHandlers() {
   ipcMain.handle('mod-logs:open-window', () => { openModLogsWindow(); return true; });
 
   ipcMain.handle('mods:scan', scanInstalledMods);
-  ipcMain.handle('mods:details', async (_event, modId) => {
+  ipcMain.handle('mods:details', async (_event, modId, options = {}) => {
     try {
-      return await fetchWorkshopDetails(modId);
+      return await fetchWorkshopDetails(modId, { refresh: options?.refresh === true });
     } catch (error) {
       logger.error(`Workshop details error for ${String(modId || '')}: ${error.message}`);
       throw new Error(mainT('workshopDetailsFailed', { message: error.message }));
@@ -1680,18 +1685,18 @@ function registerUpdateHandlers() {
     if (!app.isPackaged) return { state: 'development' };
     if (!updateTrustPolicy.enabled) return { state: 'manual' };
     if (['checking', 'downloading', 'verifying', 'downloaded'].includes(updaterState)) {
-      return { state: updaterState, version: String(availableUpdateInfo?.version || '') };
+      return { state: updaterState, version: String(availableUpdateInfo?.version || ''), status: latestUpdateStatus };
     }
     const settings = settingsStore.get();
     applyUpdaterPreferences(settings);
     try {
       const result = await requestUpdateCheck();
-      return { state: updaterState, version: result?.updateInfo?.version || '' };
+      return { state: updaterState, version: result?.updateInfo?.version || '', status: latestUpdateStatus };
     } catch (error) {
       const message = safeUpdateErrorMessage(error);
       logger?.error(`Manual update check failed: ${error.message}`);
       publishUpdateStatus({ state: 'error', message });
-      return { state: 'error', message };
+      return { state: 'error', message, status: latestUpdateStatus };
     }
   });
   ipcMain.handle('updates:download', async () => {
@@ -1760,7 +1765,14 @@ app.whenReady().then(async () => {
   registerGameHandlers();
   registerSystemHandlers();
   registerUpdateHandlers();
+  updateCheckScheduler = createUpdateCheckScheduler({
+    check: requestUpdateCheck,
+    getState: () => updaterState,
+    enabled: () => updateTrustPolicy.enabled,
+    onError: error => logger?.error(`Periodic update check failed: ${error.message}`)
+  });
   createWindow();
+  updateCheckScheduler.start();
 }).catch((error) => {
   console.error(`Launcher startup failed: ${error?.stack || error}`);
   dialog.showErrorBox('LAR Launcher', 'The launcher could not start safely. Reinstall it from the official ALGZ release page.');
@@ -1772,6 +1784,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  updateCheckScheduler?.stop();
   workshopDownloads.cancelPendingStart();
   // Invalidate in-flight verification/activation without deleting its durable
   // deadline. Restart must reverify the artifact before restoring installation.
@@ -1784,4 +1797,8 @@ app.on('before-quit', () => {
 
 app.on('activate', () => {
   if (!factoryResetStartup.active && BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+app.on('browser-window-focus', (_event, window) => {
+  if (window === mainWindow) updateCheckScheduler?.focus();
 });

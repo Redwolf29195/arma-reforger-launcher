@@ -58,7 +58,10 @@
           <button class="nav-item" data-view="settings">
             <img src="assets/icons/settings.svg" alt=""><span>Settings</span>
           </button>
-          <a class="sidebar-help" id="sidebarDiscordLink" href="https://discord.gg/P54RqqWDE" target="_blank" rel="noopener noreferrer" aria-label="Need help? Open ALGZ Discord" title="Open ALGZ Discord">
+          <button class="nav-item" data-view="partners" type="button">
+            <img src="assets/icons/users.svg" alt=""><span>Partners</span>
+          </button>
+          <a class="sidebar-help" id="sidebarDiscordLink" href="https://discord.gg/4jxSVcRruV" target="_blank" rel="noopener noreferrer" aria-label="Need help? Open ALGZ Discord" title="Open ALGZ Discord">
             <img class="sidebar-help-icon" src="assets/icons/help.svg" alt=""><span class="sidebar-help-label">Need help?</span><span class="sidebar-discord-mark"><img src="assets/icons/discord.svg" alt=""></span>
           </a>
         </nav>
@@ -158,7 +161,7 @@
               <article class="home-community-card">
                 <div class="home-community-copy"><p data-home-i18n="home.communityKicker">COMMUNITY</p><strong>ALGZ</strong><small class="home-community-credit" data-home-i18n="home.communityCredit">Open-source launcher</small></div>
                 <div class="home-community-links">
-                  <a class="home-community-link discord" id="homeDiscordLink" href="https://discord.gg/P54RqqWDE" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ Discord" title="Open ALGZ Discord"><img src="assets/icons/discord.svg" alt=""></a>
+                  <a class="home-community-link discord" id="homeDiscordLink" href="https://discord.gg/4jxSVcRruV" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ Discord" title="Open ALGZ Discord"><img src="assets/icons/discord.svg" alt=""></a>
                   <a class="home-community-link website" id="homeWebsiteLink" href="https://armalaucher.com/" target="_blank" rel="noopener noreferrer" aria-label="Open ALGZ website" title="Open ALGZ website"><img src="assets/icons/globe-2.svg" alt=""></a>
                 </div>
               </article>
@@ -246,11 +249,15 @@
               <img src="assets/icons/search.svg" alt="">
               <input id="serverSearch" type="search" placeholder="Search" autocomplete="off" maxlength="120">
             </label>
-            <select id="serverSort" hidden tabindex="-1" aria-hidden="true">
-              <option value="players_desc">Most players</option>
-              <option value="popularity">Popular</option>
-              <option value="favorites">Favorites</option>
-            </select>
+            <div class="workshop-sort-field server-sort-field">
+              <span>Sort</span>
+              <select id="serverSort" hidden tabindex="-1" aria-label="Sort">
+                <option value="players_desc">Most players</option>
+                <option value="popularity">Popular</option>
+                <option value="favorites">Favorites</option>
+              </select>
+              <div class="styled-select" data-select-for="serverSort"></div>
+            </div>
             <button class="button primary" type="submit"><img src="assets/icons/search.svg" alt=""><span>Search</span></button>
             <button class="icon-button bordered" id="refreshServers" type="button" title="Refresh servers"><img src="assets/icons/refresh-cw.svg" alt=""></button>
           </form>
@@ -407,6 +414,32 @@
           <div class="settings-actions">
             <button class="button quiet danger-text" id="resetSettings"><img src="assets/icons/rotate-ccw.svg" alt="">Factory reset</button>
             <button class="button primary" id="saveSettings"><img src="assets/icons/save.svg" alt="">Save</button>
+          </div>
+        </section>
+
+        <section class="view partners-view" id="view-partners" aria-labelledby="pageTitle">
+          <div class="partners-grid" id="partnersGrid"></div>
+          <div class="partner-detail" id="partnerDetail" hidden>
+            <button class="partner-back" id="partnersBack" type="button">
+              <img src="assets/icons/chevron-left.svg" alt=""><span>All partners</span>
+            </button>
+            <article class="partner-profile" aria-labelledby="partnerTitle">
+              <header class="partner-profile-header">
+                <img class="partner-avatar" id="partnerAvatar" alt="">
+                <div class="partner-profile-heading">
+                  <p class="partner-eyebrow" id="partnerCommunity"></p>
+                  <h2 id="partnerTitle" tabindex="-1"></h2>
+                </div>
+              </header>
+              <div class="partner-description" id="partnerDescription"></div>
+              <footer class="partner-profile-footer">
+                <a class="partner-discord-button" id="partnerDiscord" target="_blank" rel="noopener noreferrer">
+                  <img class="partner-discord-icon" src="assets/icons/discord.svg" alt="">
+                  <span>Discord</span>
+                  <img class="partner-external-icon" src="assets/icons/external-link.svg" alt="">
+                </a>
+              </footer>
+            </article>
           </div>
         </section>
       </div>
@@ -655,7 +688,10 @@
   <dialog id="modDetailsDialog" class="mod-details-dialog">
     <div class="dialog-header mod-details-header">
       <div><span id="modDetailsSource"></span><h2 id="modDetailsTitle"></h2></div>
-      <button class="icon-button" id="closeModDetailsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+      <div class="mod-details-window-actions">
+        <button class="icon-button bordered" id="refreshModDetails" type="button" title="Refresh mod information" aria-label="Refresh mod information"><img src="assets/icons/refresh-cw.svg" alt=""></button>
+        <button class="icon-button" id="closeModDetailsTop" type="button" title="Close"><img src="assets/icons/x.svg" alt=""></button>
+      </div>
     </div>
     <div id="modDetailsBody" class="mod-details-body"></div>
     <div class="dialog-actions mod-details-actions">
@@ -735,6 +771,7 @@
   <script src="i18n.js"></script>
   <script src="styledSelect.js"></script>
   <script src="confirmationDialog.js"></script>
+  <script src="partners.js"></script>
   <script src="../shared/serverAvailability.js"></script>
   <script src="app.js"></script>
 </body>

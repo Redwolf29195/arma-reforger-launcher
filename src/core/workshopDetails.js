@@ -1,7 +1,8 @@
 const { readBoundedResponseText } = require('./boundedResponse');
 const WORKSHOP_ORIGIN = 'https://reforger.armaplatform.com';
 const WORKSHOP_CDN_HOST = 'ar-gcp-cdn.bistudio.com';
-const CACHE_TTL_MS = 20 * 60 * 1000;
+const CACHE_TTL_MS = 60 * 1000;
+const MAX_DETAILS_CACHE_ENTRIES = 200;
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15 * 1000;
 const MAX_PAGE_BYTES = 2 * 1024 * 1024;
@@ -24,6 +25,7 @@ const WORKSHOP_CATEGORY_TAGS = new Set([
 ]);
 
 const detailsCache = new Map();
+const detailsRequests = new Map();
 const searchCache = new Map();
 const sourceSearchCache = new Map();
 
@@ -243,20 +245,38 @@ async function fetchWorkshopDetails(modId, options = {}) {
   const normalizedId = normalizeModId(modId);
   const now = options.now?.() ?? Date.now();
   const cached = detailsCache.get(normalizedId);
-  if (!options.refresh && cached && cached.expiresAt > now) return cached.value;
+  if (!options.refresh && cached && cached.expiresAt > now) {
+    detailsCache.delete(normalizedId);
+    detailsCache.set(normalizedId, cached);
+    return cached.value;
+  }
+  const pending = detailsRequests.get(normalizedId);
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  const timeoutMs = options.timeoutMs || REQUEST_TIMEOUT_MS;
+  if (!options.signal && pending && !pending.signal && pending.fetchImpl === fetchImpl
+      && pending.timeoutMs === timeoutMs && pending.refresh === Boolean(options.refresh)) return pending.promise;
 
-  const html = await fetchWorkshopPage(
-    `${WORKSHOP_ORIGIN}/workshop/${normalizedId}`,
-    options,
-    'Не удалось подключиться к Workshop.'
-  );
-
-  const value = normalizeWorkshopDetails(extractNextData(html), normalizedId);
-  detailsCache.set(normalizedId, {
-    value,
-    expiresAt: now + (options.cacheTtlMs || CACHE_TTL_MS)
-  });
-  return value;
+  const request = { fetchImpl, timeoutMs, signal: options.signal, refresh: Boolean(options.refresh) };
+  detailsRequests.set(normalizedId, request);
+  request.promise = (async () => {
+    try {
+      const html = await fetchWorkshopPage(`${WORKSHOP_ORIGIN}/workshop/${normalizedId}`, options,
+        'Не удалось подключиться к Workshop.');
+      const value = normalizeWorkshopDetails(extractNextData(html), normalizedId);
+      // A refresh or cache reset must not be undone by an older, slower response.
+      if (detailsRequests.get(normalizedId) === request) {
+        detailsCache.delete(normalizedId);
+        detailsCache.set(normalizedId, {
+          value, expiresAt: (options.now?.() ?? Date.now()) + (options.cacheTtlMs || CACHE_TTL_MS)
+        });
+        while (detailsCache.size > MAX_DETAILS_CACHE_ENTRIES) detailsCache.delete(detailsCache.keys().next().value);
+      }
+      return value;
+    } finally {
+      if (detailsRequests.get(normalizedId) === request) detailsRequests.delete(normalizedId);
+    }
+  })();
+  return request.promise;
 }
 
 async function fetchWorkshopSourcePage(request, page, options, now, refresh) {
@@ -321,6 +341,7 @@ async function fetchWorkshopSearch(value = {}, options = {}) {
 
 function clearWorkshopDetailsCache() {
   detailsCache.clear();
+  detailsRequests.clear();
   searchCache.clear();
   sourceSearchCache.clear();
 }

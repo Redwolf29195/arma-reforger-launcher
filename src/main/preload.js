@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld('reforgerLauncher', {
   bootstrap: () => ipcRenderer.invoke('launcher:bootstrap'),
   scanMods: () => ipcRenderer.invoke('mods:scan'),
   updateInstalledMods: (payload) => ipcRenderer.invoke('mods:update', payload),
-  getModDetails: (modId) => ipcRenderer.invoke('mods:details', modId),
+  getModDetails: (modId, options = {}) => ipcRenderer.invoke('mods:details', modId, { refresh: options.refresh === true }),
   translateModDescription: (modId) => ipcRenderer.invoke('mods:translate-description', modId),
   searchWorkshop: (payload) => ipcRenderer.invoke('workshop:search', payload),
   copyScenarioId: (scenarioId) => ipcRenderer.invoke('clipboard:copy-scenario', scenarioId),

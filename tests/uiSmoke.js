@@ -116,7 +116,7 @@ app.whenReady().then(async () => {
     mockModLogs = [...saved, ...mockModLogs].slice(0, 1000);
     return saved;
   };
-  ipcMain.handle('launcher:bootstrap', () => ({
+  const mockBootstrap = () => ({
     appVersion: '0.2.9',
     packaged: false,
     platform: 'win32',
@@ -166,7 +166,8 @@ app.whenReady().then(async () => {
         dependencies: []
       }
     ]
-  }));
+  });
+  ipcMain.handle('launcher:bootstrap', mockBootstrap);
   ipcMain.handle('mod-logs:list', () => mockModLogs);
   ipcMain.handle('mod-logs:add', (_event, entry) => appendMockLogs([entry])[0]);
   ipcMain.handle('mod-logs:add-many', (_event, entries) => appendMockLogs(entries));
@@ -189,7 +190,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('mods:scan', () => {
     backgroundScanRequests += 1;
-    return modActionScenario.installedMods || [];
+    return modActionScenario.installedMods || mockBootstrap().installedMods;
   });
   ipcMain.handle('updates:download', () => {
     updateDownloadRequests += 1;
@@ -339,6 +340,13 @@ app.whenReady().then(async () => {
   });
 
   await window.loadURL(pathToFileURL(path.join(__dirname, '..', 'src', 'renderer', 'index.html')).href);
+  const watchdog = setTimeout(async () => {
+    try {
+      const diagnostic = await window.webContents.executeJavaScript(`({view:state.currentView,busy:state.busy,openDialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.id),titlebar:document.querySelector('#titlebarStatus')?.textContent,toast:document.querySelector('#toast')?.textContent})`);
+      process.stderr.write(`UI smoke timeout: ${JSON.stringify(diagnostic)}\n`);
+    } finally { app.exit(1); }
+  }, 60_000);
+  watchdog.unref();
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const ready = await window.webContents.executeJavaScript(
       `document.querySelector('#appVersion')?.textContent.trim() === 'v0.2.9'
@@ -352,6 +360,7 @@ app.whenReady().then(async () => {
   const homeImage = await window.capturePage();
   await fs.writeFile(homeOutputPath, homeImage.toPNG());
   const result = await window.webContents.executeJavaScript(`(async () => {
+    try {
     // Populate the hidden Mods view before checking its normalized status badges.
     renderMods();
     const englishInitial = {
@@ -890,6 +899,7 @@ app.whenReady().then(async () => {
       editPresetEnabled,
       activeView: document.querySelector('.view.active')?.id || ''
     };
+    } catch (error) { throw new Error((error.stack || error.message) + JSON.stringify({view:state.currentView,search:state.search,mods:state.installedMods.length,filter:state.modFilter,table:document.querySelector('#modsTableBody')?.textContent})); }
   })()`);
 
   result.authenticity.officialReleaseOpenRequests = officialReleaseOpenRequests;
@@ -1215,7 +1225,7 @@ app.whenReady().then(async () => {
     || result.englishInitial.homePreset !== 'Field Ops' || result.englishInitial.homeSelected !== '3 selected mods'
     || result.englishInitial.homeModsMetric !== '3' || result.englishInitial.homePresetsMetric !== '2'
     || result.englishInitial.homeGuideTitle !== 'Not sure where to begin?'
-    || result.englishInitial.homeDiscord !== 'https://discord.gg/P54RqqWDE'
+    || result.englishInitial.homeDiscord !== 'https://discord.gg/4jxSVcRruV'
     || result.englishInitial.homeWebsite !== 'https://armalaucher.com/'
     || result.englishInitial.homeCredit !== 'Official ALGZ distribution'
     || result.homeNavigation !== 'view-mods'

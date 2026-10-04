@@ -299,17 +299,20 @@ test('missing, malformed, foreign, and oversized status files only end in a neut
   const terminals = [];
   const errors = [];
   let timeouts = 0;
-  createServerJoinMonitor({
+  let resolveTimeout;
+  const timeoutReceived = new Promise(resolve => { resolveTimeout = resolve; });
+  const stop = createServerJoinMonitor({
     statusPath,
     token: TOKEN,
     startedAt: Date.now(),
     intervalMs: 10,
-    timeoutMs: 140,
+    timeoutMs: 1500,
     onStatus: (status) => statuses.push(status),
     onTerminal: (status) => terminals.push(status),
-    onTimeout: () => { timeouts += 1; },
+    onTimeout: () => { timeouts += 1; resolveTimeout(); },
     onError: (error) => errors.push(error)
   });
+  t.after(stop);
 
   await delay(25);
   await fs.mkdir(path.dirname(statusPath), { recursive: true });
@@ -318,7 +321,10 @@ test('missing, malformed, foreign, and oversized status files only end in a neut
   await fs.writeFile(statusPath, `${OTHER_TOKEN}|joining|Not this request\n`, 'utf8');
   await delay(25);
   await fs.writeFile(statusPath, 'x'.repeat(MAX_SERVER_JOIN_FILE_BYTES + 1), 'utf8');
-  await delay(120);
+  // Observe the oversized read and the timeout callback rather than assuming
+  // the filesystem polls have finished after a short sleep under parallel load.
+  await waitFor(() => errors.length === 1);
+  await withReferencedDeadline(timeoutReceived);
 
   assert.deepEqual(statuses, []);
   assert.deepEqual(terminals, []);

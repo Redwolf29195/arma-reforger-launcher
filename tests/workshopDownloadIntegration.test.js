@@ -180,7 +180,8 @@ function rendererRuntime(api, initialDownloadState = 'downloading') {
   vm.runInContext([
     extract('function modAcquisitionState(', 'function renderModAcquisitionControls()'),
     extract('async function installWorkshopMod(mod)', 'function detailFact('),
-    extract('function scheduleModDownloadPoll(', 'function renderUpdateStatus()')
+    extract('function scheduleModDownloadPoll(', rendererSource.includes('function renderUpdateStatus()')
+      ? 'function renderUpdateStatus()' : 'async function repairLauncher()')
   ].join('\n'), context, { filename: 'renderer-workshop-race-integration.js' });
   return { context, state, toasts };
 }

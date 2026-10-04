@@ -22,6 +22,22 @@ pnpm run dist:win
 
 `scripts/prepare-build.js` copies application source, license notices and the included Workshop bridge into `.build/app`. It does not require a private release key. Output directories are configured in `package.json`.
 
+### Windows version without launcher updates
+
+Run `pnpm run dist:win:no-updates` to produce the separate `LAR-Launcher-No-Updates` Setup and Portable artifacts for the same source version. The build removes launcher update handlers, renderer controls, settings, feed configuration, verification key, update modules and the `electron-updater` dependency. Workshop mod downloads and mod updates remain available. No private signing key is required.
+
+`scripts/no-updates-transform.json` contains exact, reviewed removal patches. If any surrounding updater code changes, the build fails until those patches are reviewed again; it never falls back to shipping a disabled updater. Both variants use the same common application source and the existing profile identity. Use the normal public Windows Setup for authenticated automatic launcher updates; the normal Portable uses the existing manual release-download workflow.
+
+Validate the two prepared interfaces in temporary profiles with:
+
+```sh
+pnpm test
+pnpm run test:no-updates
+node node_modules/electron/cli.js tests/dualBuildUiSmoke.js . with-updates artifacts/dual-with-updates
+node scripts/prepare-build.js --no-updates
+node node_modules/electron/cli.js tests/dualBuildUiSmoke.js .build/app no-updates artifacts/dual-no-updates
+```
+
 On Linux, `pnpm run dist:linux` builds separate x64 DEB and AppImage packages. The Linux workflow validates Ubuntu 22.04 and 24.04, including source tests, Electron UI checks, the installed DEB and the extracted AppImage payload with sandboxing enabled. It does not test a mounted AppImage or start Arma Reforger; Steam/Proton and real game compatibility require separate validation. The macOS target remains unvalidated.
 
 For UI changes, also run the relevant Electron smoke checks with isolated fixtures:

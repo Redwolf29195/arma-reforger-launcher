@@ -10,7 +10,7 @@ const PUBLIC_KEY_PATH = 'src/security/release-public-key.pem';
 const ROOT_FILES = new Set([
   '.gitignore', 'AGENTS.md', 'LICENSE', 'README.md', 'RELEASE-PROCESS.md',
   'THIRD_PARTY_NOTICES.md', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml',
-  'electron-builder.release.cjs', 'CONTRIBUTING.md', 'SECURITY.md', 'CHANGELOG.md'
+  'electron-builder.release.cjs', 'electron-builder.no-updates.cjs', 'CONTRIBUTING.md', 'SECURITY.md', 'CHANGELOG.md'
 ]);
 const SOURCE_ROOTS = new Set(['src', 'scripts', 'tests', 'support', '.github']);
 const GENERATED_ROOTS = /^(?:\.git|node_modules|\.pnpm-store|dist(?:-.*)?|release|artifacts|coverage|\.build(?:-staging)?|\.secure-build|\.local-.*)$/i;

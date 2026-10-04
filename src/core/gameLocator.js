@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { discoverLinuxSteam, findLinuxGameProfileDirectories, linuxSteamRootCandidates } = require('./steamLinux');
+const { discoverLinuxSteam, findLinuxGameProfileDirectories, linuxSteamRootCandidates, readSteamLibraries } = require('./steamLinux');
 
 const execFileAsync = promisify(execFile);
 
@@ -45,10 +45,11 @@ function steamRootCandidates(options = {}) {
   if (options.steamRoots) return options.steamRoots;
   if (platform === 'linux') return linuxSteamRootCandidates(options);
   if (platform === 'win32') {
+    const env = options.env || process.env;
     return [
-      process.env['ProgramFiles(x86)'] ? path.join(process.env['ProgramFiles(x86)'], 'Steam') : '',
-      process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'Steam') : '',
-      process.env.STEAM_PATH || '',
+      env['ProgramFiles(x86)'] ? path.join(env['ProgramFiles(x86)'], 'Steam') : '',
+      env.ProgramFiles ? path.join(env.ProgramFiles, 'Steam') : '',
+      env.STEAM_PATH || '',
       'C:\\Steam',
       'C:\\Programs\\Steam',
       'C:\\Program Files (x86)\\Steam'
@@ -59,20 +60,6 @@ function steamRootCandidates(options = {}) {
     path.join(home, '.steam', 'steam'),
     path.join(home, '.local', 'share', 'Steam')
   ];
-}
-
-async function readSteamLibraries(steamRoot) {
-  const libraries = new Set([steamRoot]);
-  const vdfPath = path.join(steamRoot, 'steamapps', 'libraryfolders.vdf');
-  try {
-    const vdf = await fs.readFile(vdfPath, 'utf8');
-    for (const match of vdf.matchAll(/"path"\s+"([^"]+)"/g)) {
-      libraries.add(match[1].replace(/\\\\/g, '\\'));
-    }
-  } catch {
-    // Preserve the existing Windows/macOS discovery behavior.
-  }
-  return [...libraries];
 }
 
 function executableName(platform = process.platform) {
@@ -92,7 +79,9 @@ function steamRootFromGamePath(value) {
   return markerIndex > 0 ? configuredPath.slice(0, markerIndex) : '';
 }
 
-async function steamRegistryRoots() {
+async function steamRegistryRoots(options = {}) {
+  if (Array.isArray(options.registryRoots)) return options.registryRoots;
+  if (options.steamRoots) return [];
   if (process.platform !== 'win32') return [];
   const queries = [
     ['HKCU\\Software\\Valve\\Steam', 'SteamPath'],
@@ -121,7 +110,7 @@ async function findSteamExecutable(preferredGamePath = '', options = {}) {
   const preferredRoot = steamRootFromGamePath(preferredGamePath);
   const roots = [...new Set([
     preferredRoot,
-    ...(platform === 'win32' ? await steamRegistryRoots() : []),
+    ...(platform === 'win32' ? await steamRegistryRoots(options) : []),
     ...steamRootCandidates(options)
   ].filter(Boolean))];
 
@@ -156,9 +145,19 @@ function configuredExecutableCandidates(value, options = {}) {
 
 async function resolveGameExecutable(value, options = {}) {
   const expectedName = executableName(options.platform || process.platform).toLowerCase();
-  for (const candidate of configuredExecutableCandidates(value, options)) {
+  const candidates = configuredExecutableCandidates(value, options);
+  // A selected executable or game folder remains an explicit user choice.
+  for (const candidate of candidates.slice(0, 2)) {
     if (path.basename(candidate).toLowerCase() !== expectedName) continue;
     if (await isFile(candidate)) return candidate;
+  }
+  const configuredPath = normalizeConfiguredPath(value);
+  if (configuredPath && await exists(path.join(configuredPath, 'steamapps'))) {
+    const discovery = await discoverLinuxSteam({ ...options, steamRoots: [configuredPath] });
+    if (discovery.installations.length) return discovery.installations[0].gameExecutable;
+  }
+  for (const candidate of candidates.slice(2)) {
+    if (path.basename(candidate).toLowerCase() === expectedName && await isFile(candidate)) return candidate;
   }
   return '';
 }
@@ -166,22 +165,36 @@ async function resolveGameExecutable(value, options = {}) {
 async function findGameExecutable(preferredPath = '', options = {}) {
   const platform = options.platform || process.platform;
   const preferredExecutable = await resolveGameExecutable(preferredPath, options);
-  if (preferredExecutable) return preferredExecutable;
+  const preferredLibrary = steamRootFromGamePath(preferredExecutable);
+  if (preferredExecutable && !preferredLibrary) return preferredExecutable;
 
   if (platform === 'linux') {
-    const roots = [steamRootFromGamePath(preferredPath), ...steamRootCandidates(options)].filter(Boolean);
+    const roots = [preferredLibrary, steamRootFromGamePath(preferredPath), ...steamRootCandidates(options)].filter(Boolean);
     const discovery = await discoverLinuxSteam({ ...options, steamRoots: roots });
-    return discovery.installations[0]?.gameExecutable || '';
+    return discovery.installations[0]?.gameExecutable || preferredExecutable || '';
   }
 
+  const roots = [...new Set([
+    preferredLibrary,
+    steamRootFromGamePath(preferredPath),
+    ...(platform === 'win32' ? await steamRegistryRoots(options) : []),
+    ...steamRootCandidates(options)
+  ].filter(Boolean))];
+  // Steam's manifests describe moved/custom install folders. Prefer these over
+  // legacy directory guesses, which can still contain an obsolete game copy.
+  const discovery = await discoverLinuxSteam({ ...options, steamRoots: roots });
+  if (discovery.installations.length) return discovery.installations[0].gameExecutable;
+  // A stored path can still exist after Steam moves the active installation.
+  // Keep explicit unmanaged copies when Steam has no current installation.
+  if (preferredExecutable) return preferredExecutable;
   const candidates = [];
-  for (const steamRoot of steamRootCandidates(options)) {
+  for (const steamRoot of roots) {
     for (const library of await readSteamLibraries(steamRoot)) {
       candidates.push(path.join(library, 'steamapps', 'common', 'Arma Reforger', executableName(platform)));
     }
   }
 
-  if (platform === 'win32') {
+  if (platform === 'win32' && !options.steamRoots) {
     for (let code = 'C'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code += 1) {
       const drive = String.fromCharCode(code);
       candidates.push(`${drive}:\\SteamLibrary\\steamapps\\common\\Arma Reforger\\ArmaReforgerSteam.exe`);

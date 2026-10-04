@@ -4,13 +4,15 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { serializeProtectedUpdateConfig } = require('../src/main/updateTrust');
+const { removeLauncherUpdates } = require('./no-updates-build');
 
 async function prepareBuild(projectRoot, argumentsList = [], environment = process.env) {
   projectRoot = path.resolve(projectRoot);
   const publicBuild = argumentsList.includes('--public');
   const publicUnsignedBuild = argumentsList.includes('--public-unsigned');
-  if (argumentsList.some((item) => !['--public', '--public-unsigned'].includes(item))) {
-    throw new Error('Usage: node scripts/prepare-build.js [--public | --public-unsigned]');
+  const noUpdates = argumentsList.includes('--no-updates');
+  if (argumentsList.some((item) => !['--public', '--public-unsigned', '--no-updates'].includes(item))) {
+    throw new Error('Usage: node scripts/prepare-build.js [--public | --public-unsigned] [--no-updates]');
   }
   if (publicBuild && publicUnsignedBuild) throw new Error('Choose either --public or --public-unsigned, not both.');
   const metadata = JSON.parse(await fs.readFile(path.join(projectRoot, 'package.json'), 'utf8'));
@@ -44,24 +46,32 @@ async function prepareBuild(projectRoot, argumentsList = [], environment = proce
   const stagedAppRoot = path.join(stagingRoot, 'app');
   await fs.mkdir(stagedAppRoot, { recursive: true });
   await fs.cp(path.join(projectRoot, 'src'), path.join(stagedAppRoot, 'src'), { recursive: true, errorOnExist: true, force: false });
+  if (noUpdates) await removeLauncherUpdates(stagedAppRoot);
   await fs.cp(path.join(projectRoot, 'support', 'ALGZLauncherWorkshopBridge'),
     path.join(stagedAppRoot, 'launcher-addons', 'ALGZLauncherWorkshopBridge'), { recursive: true, errorOnExist: true, force: false });
   for (const name of ['LICENSE', 'THIRD_PARTY_NOTICES.md']) await fs.copyFile(path.join(projectRoot, name), path.join(stagedAppRoot, name));
   const stagedPackage = Object.fromEntries(['name', 'version', 'description', 'main', 'private', 'author', 'license', 'homepage', 'repository', 'dependencies']
     .filter((key) => metadata[key] !== undefined).map((key) => [key, metadata[key]]));
+  if (noUpdates) {
+    stagedPackage.dependencies = {};
+    stagedPackage.description = 'LAR Launcher: without launcher updates';
+  }
   await fs.writeFile(path.join(stagedAppRoot, 'package.json'), `${JSON.stringify(stagedPackage, null, 2)}\n`);
-  await fs.symlink(path.join(projectRoot, 'node_modules'), path.join(stagedAppRoot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+  if (!noUpdates) {
+    await fs.symlink(path.join(projectRoot, 'node_modules'), path.join(stagedAppRoot, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+  }
   const securityRoot = path.join(stagedAppRoot, 'src', 'security');
   await fs.mkdir(securityRoot, { recursive: true });
   const buildInfo = {
     schema: 1,
     version: metadata.version,
+    launcherUpdates: !noUpdates,
     releaseTier: publicBuild ? 'public' : publicUnsignedBuild ? 'public-unsigned' : 'community',
     windowsPublisher,
     windowsCertificateThumbprint
   };
   await fs.writeFile(path.join(securityRoot, 'build-info.json'), `${JSON.stringify(buildInfo, null, 2)}\n`);
-  await fs.writeFile(path.join(securityRoot, 'app-update.yml'), serializeProtectedUpdateConfig(windowsPublisher));
+  if (!noUpdates) await fs.writeFile(path.join(securityRoot, 'app-update.yml'), serializeProtectedUpdateConfig(windowsPublisher));
   return { ...buildInfo, stagedAppRoot };
 }
 

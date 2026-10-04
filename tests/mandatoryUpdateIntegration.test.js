@@ -52,6 +52,7 @@ function runtime(clock, store, overrides = {}) {
     stopServerLaunchMonitor: null,
     workshopDownloads: { cancelPendingStart() {} },
     updatePushSubscriber: { stop() {} },
+    updateCheckScheduler: null,
     app: { on: (name, callback) => { events[name] = callback; } },
     mainT: (key) => key,
     selectSignedInstallerUpdate: () => descriptor,
